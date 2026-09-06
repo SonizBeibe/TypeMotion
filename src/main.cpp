@@ -202,6 +202,46 @@ bool AegisubApp::OnInit() {
 		wxMessageBox(fmt_tl("Configuration file is invalid. Error reported:\n%s", err.GetMessage()), _("Error"));
 	}
 
+	bool dark_mode = OPT_GET("App/Dark Mode")->GetBool();
+	auto set_color = [&](const char* key, const char* light, const char* dark) {
+		if (OPT_GET(key)->GetColor() == agi::Color(dark_mode ? light : dark))
+			OPT_SET(key)->SetColor(agi::Color(dark_mode ? dark : light));
+	};
+
+	// Subtitle Grid
+	set_color("Colour/Subtitle Grid/Active Border", "rgb(255, 91, 239)", "rgb(45, 45, 45)");
+	set_color("Colour/Subtitle Grid/Background/Background", "rgb(255,255,255)", "#21222c");
+	set_color("Colour/Subtitle Grid/Background/Comment", "rgb(216, 222, 245)", "#4D4F68");
+	set_color("Colour/Subtitle Grid/Background/Inframe", "rgb(255, 253, 234)", "#3e3545");
+	set_color("Colour/Subtitle Grid/Background/Selected Comment", "rgb(211, 238, 238)", "#405e42");
+	set_color("Colour/Subtitle Grid/Background/Selection", "rgb(206, 255, 231)", "#405e42");
+	set_color("Colour/Subtitle Grid/Background/Open Fold", "rgb(235, 235, 235)", "#37414d");
+	set_color("Colour/Subtitle Grid/Background/Closed Fold", "rgb(200, 200, 200)", "#37414d");
+	set_color("Colour/Subtitle Grid/Collision", "rgb(255,0,0)", "#E9E9F4");
+	set_color("Colour/Subtitle Grid/CPS Error", "rgb(255,0,0)", "#ff6e6e");
+	set_color("Colour/Subtitle Grid/Header", "rgb(165, 207, 231)", "#715696");
+	set_color("Colour/Subtitle Grid/Left Column", "rgb(196, 236, 201)", "#282a36");
+	set_color("Colour/Subtitle Grid/Lines", "rgb(190,190,190)", "#626483");
+	set_color("Colour/Subtitle Grid/Selection", "rgb(0,0,0)", "#E9E9F4");
+	set_color("Colour/Subtitle Grid/Standard", "rgb(0,0,0)", "#E9E9F4");
+
+	// Subtitle
+	set_color("Colour/Subtitle/Background", "rgb(255, 255, 255)", "#21222c");
+	set_color("Colour/Subtitle/Syntax/Background/Error", "rgb(255, 200, 200)", "rgb(255, 200, 200)");
+	set_color("Colour/Subtitle/Syntax/Brackets", "rgb(20, 50, 255)", "#ff79c6");
+	set_color("Colour/Subtitle/Syntax/Comment", "rgb(0,0,0)", "#4D4F68");
+	set_color("Colour/Subtitle/Syntax/Drawing Command", "rgb(0,0,0)", "#bd93f9");
+	set_color("Colour/Subtitle/Syntax/Drawing X", "rgb(90,40,40)", "#ff5555");
+	set_color("Colour/Subtitle/Syntax/Drawing Y", "rgb(40,90,40)", "#50fa7b");
+	set_color("Colour/Subtitle/Syntax/Error", "rgb(200, 0, 0)", "rgb(200, 0, 0)");
+	set_color("Colour/Subtitle/Syntax/Karaoke Template", "rgb(128, 0, 192)", "rgb(128, 0, 192)");
+	set_color("Colour/Subtitle/Syntax/Karaoke Variable", "rgb(128, 0, 192)", "rgb(128, 0, 192)");
+	set_color("Colour/Subtitle/Syntax/Line Break", "rgb(160, 160, 160)", "#f8f8f2");
+	set_color("Colour/Subtitle/Syntax/Normal", "rgb(0,0,0)", "#E9E9F4");
+	set_color("Colour/Subtitle/Syntax/Parameters", "rgb(40, 90, 40)", "#f1fa8c");
+	set_color("Colour/Subtitle/Syntax/Slashes", "rgb(255, 0, 200)", "#8be9fd");
+	set_color("Colour/Subtitle/Syntax/Tags", "rgb(90, 90, 90)", "rgb(90, 90, 90)");
+
 #ifdef _WIN32
 	StartupLog("Load installer configuration");
 	if (OPT_GET("App/First Start")->GetBool()) {
