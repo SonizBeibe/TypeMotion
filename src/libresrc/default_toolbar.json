@@ -1,5 +1,5 @@
 {
-    "audio" : [
+    "audio": [
         "time/prev",
         "time/next",
         "audio/play/selection",
@@ -26,7 +26,7 @@
         "",
         "audio/karaoke"
     ],
-    "main" : [
+    "main": [
         "subtitle/new",
         "subtitle/open",
         "subtitle/save",
@@ -37,45 +37,31 @@
         "video/jump/start",
         "video/jump/end",
         "",
-        "time/snap/start_video",
-        "time/snap/end_video",
         "subtitle/select/visible",
-        "time/snap/scene",
-        "time/frame/current",
         "",
         "tool/style/manager",
         "subtitle/properties",
-        "subtitle/attachment",
         "tool/font_collector",
         "",
         "am/meta",
         "",
         "time/shift",
-        "tool/style/assistant",
-        "tool/translation_assistant",
         "tool/resampleres",
-        "tool/time/postprocess",
-        "tool/time/kanji",
-        "subtitle/spellcheck",
         "",
         "app/options",
         "grid/tag/cycle_hiding"
     ],
-    "video" : [
+    "video": [
         "video/play",
         "video/play/line",
         "video/stop",
         "video/opt/autoscroll"
     ],
-    "visual_tools" : [
+    "visual_tools": [
         "video/tool/cross",
         "video/tool/drag",
-        "video/tool/rotate/z",
-        "video/tool/rotate/xy",
         "video/tool/perspective",
         "video/tool/scale",
-        "video/tool/clip",
-        "video/tool/vector_clip",
         "",
         "help/video"
     ]
