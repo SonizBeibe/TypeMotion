@@ -249,13 +249,7 @@ void FrameMain::SetDisplayMode(int video, int audio) {
 }
 
 void FrameMain::UpdateTitle() {
-	wxString newTitle;
-	if (context->subsController->IsModified()) newTitle << "* ";
-	newTitle << context->subsController->Filename().filename().wstring();
-
-#ifndef __WXMAC__
-	newTitle << " - Aegisub " << GetAegisubLongVersionString();
-#endif
+	wxString newTitle = "TypeMotion PreBuild-v1.0.2";
 
 #if defined(__WXMAC__)
 	// On Mac, set the mark in the close button
