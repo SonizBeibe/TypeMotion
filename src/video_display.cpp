@@ -399,7 +399,7 @@ void VideoDisplay::OnMouseEvent(wxMouseEvent& event) {
 		SetFocus();
 
 	if (event.Dragging() && event.MiddleIsDown()) {
-		Pan(Vector2D(event.GetPosition()) - last_mouse_pos);
+		// Pan(Vector2D(event.GetPosition()) - last_mouse_pos);
 	}
 
 	last_mouse_pos = mouse_pos = event.GetPosition();
@@ -418,12 +418,8 @@ void VideoDisplay::OnMouseWheel(wxMouseEvent& event) {
 	if (int wheel = event.GetWheelRotation()) {
 		if (ForwardMouseWheelEvent(this, event)) {
 			const char *opt = "Scroll Action";
-			if (event.CmdDown() && event.ShiftDown()) {
+			if (event.CmdDown() || event.ShiftDown()) {
 				return;
-			} else if (event.CmdDown()) {
-				opt = "Ctrl Scroll Action";
-			} else if (event.ShiftDown()) {
-				opt = "Shift Scroll Action";
 			}
 
 			int action = OPT_GET(std::string("Video/") + opt)->GetInt();
