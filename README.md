@@ -69,7 +69,7 @@ Todo el reconocimiento a sus respectivos autores y colaboradores por sentar las 
 1. Ve a la página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) y descarga la última versión.
 2. Extrae el contenido en la carpeta de tu preferencia.
 3. Ejecuta `TypeMotion.exe` (o el ejecutable correspondiente).
-4. Los efectos ya vienen integrados en el menú `Automatización`, listos para usar sin configuración adicional.
+4. Los efectos ya vienen integrados en el menú `Tools`, listos para usar sin configuración adicional.
 
 ### ⚖️ Licencia
 
@@ -123,7 +123,7 @@ Full credit goes to their respective authors and contributors for laying the gro
 1. Go to the [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) page and download the latest version.
 2. Extract the contents to a folder of your choice.
 3. Run `TypeMotion.exe` (or the corresponding executable).
-4. The effects are already integrated into the `Automation` menu, ready to use with no extra setup.
+4. The effects are already integrated into the `Toolsn` menu, ready to use with no extra setup.
 
 ### ⚖️ License
 
@@ -177,7 +177,7 @@ Todo o reconhecimento vai para seus respectivos autores e colaboradores por esta
 1. Acesse a página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) e baixe a versão mais recente.
 2. Extraia o conteúdo em uma pasta de sua preferência.
 3. Execute o `TypeMotion.exe` (ou o executável correspondente).
-4. Os efeitos já vêm integrados no menu `Automação`, prontos para usar sem configuração adicional.
+4. Os efeitos já vêm integrados no menu `Tools`, prontos para usar sem configuração adicional.
 
 ### ⚖️ Licença
 
