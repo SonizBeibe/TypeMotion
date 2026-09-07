@@ -96,7 +96,7 @@ function test(subs)
 
     -- verify that everything works with the items added in order
     subs[0] = make_header("[Script Info]")
-    subs[0] = make_scriptinfo("Title", "Default Aegisub file")
+    subs[0] = make_scriptinfo("Title", "Default TypeMotion file")
     subs[0] = make_scriptinfo("ScriptType", "v4.00+")
     subs[0] = make_scriptinfo("WrapStyle", "0");
     subs[0] = make_scriptinfo("ScaledBorderAndShadow", "yes")

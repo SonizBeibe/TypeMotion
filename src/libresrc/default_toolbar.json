@@ -60,7 +60,6 @@
         "video/tool/cross",
         "video/tool/drag",
         "video/tool/perspective",
-        "video/tool/scale",
         "",
         "help/video"
     ]

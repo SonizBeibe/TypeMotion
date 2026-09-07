@@ -456,9 +456,8 @@ class AutomationMenu final : public wxMenu {
 			cm->Remove(item);
 
 		wxMenuItemList &items = GetMenuItems();
-		// Remove everything but automation manager and the separator
-		for (size_t i = items.size() - 1; i >= 2; --i)
-			Delete(items[i]);
+		while (!items.empty())
+			Delete(items.back());
 
 		auto macros = config::global_scripts->GetMacros();
 		boost::push_back(macros, c->local_scripts->GetMacros());
@@ -492,8 +491,6 @@ public:
 	, global_slot(config::global_scripts->AddScriptChangeListener(&AutomationMenu::Regenerate, this))
 	, local_slot(c->local_scripts->AddScriptChangeListener(&AutomationMenu::Regenerate, this))
 	{
-		cm->AddCommand(cmd::get("am/meta"), this);
-		AppendSeparator();
 		Regenerate();
 	}
 };
@@ -526,8 +523,8 @@ namespace menu {
 			}
 			else {
 				read_entry(item, "special", &submenu);
-				// if (submenu == "automation")
-				//	menu->Append(new AutomationMenu(c, &menu->cm), wxGetTranslation(to_wx(disp)));
+				if (submenu == "automation")
+					menu->Append(new AutomationMenu(c, &menu->cm), wxGetTranslation(to_wx(disp)));
 			}
 		}
 
