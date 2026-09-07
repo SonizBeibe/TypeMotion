@@ -31,6 +31,10 @@
 
 #include "command.h"
 
+#include "project.h"
+#include "subs_controller.h"
+#include "subtitle_format.h"
+#include <wx/filedlg.h>
 #include "../compat.h"
 #include "../dialog_manager.h"
 #include "../dialog_styling_assistant.h"

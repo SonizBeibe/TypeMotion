@@ -19,7 +19,7 @@ project('Aegisub', ['c', 'cpp'],
 cmake = import('cmake')
 
 if host_machine.system() == 'windows'
-    add_project_arguments('-DUNICODE', '-DNOMINMAX', '-D_WIN32_WINNT=0x0601', language: 'cpp')
+    add_project_arguments('-DUNICODE', '-DNOMINMAX', '-D_WIN32_WINNT=0x0601', '-wd4702', '-wd4458', '-wd4100', language: 'cpp')
 
     if not get_option('csri').disabled()
         add_global_arguments('-DCSRI_NO_EXPORT', language: 'c')
@@ -465,7 +465,7 @@ if host_machine.system() == 'windows'
     link_depends += manifest_file
 endif
 
-aegisub = executable('aegisub', aegisub_src, version_h, resrc, aegisub_order_dep,
+aegisub = executable('TypeMotion', aegisub_src, version_h, resrc, aegisub_order_dep,
                      c_args: aegisub_defines,
                      cpp_args: aegisub_defines,
                      link_with: [libresrc, libaegisub],
