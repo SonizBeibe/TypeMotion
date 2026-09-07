@@ -40,13 +40,13 @@
 
 | Efecto | Descripción | Demo Visual |
 | :--- | :--- | :---: |
-| **Fadeworks** | Fades de entrada/salida, por alpha o color, y animaciones letra por letra. | <img src="ASSETS/fadeworks.gif" width="220"> |
-| **Gradient** | Gradientes horizontales calculados automáticamente letra por letra, con soporte multilinea. | <img src="ASSETS/gradient.gif" width="220"> |
-| **Karaoke con Flash** | Sincroniza destellos de color y transparencia con el ritmo del karaoke. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
-| **Karaoke con Movimiento** | Añade desplazamiento y dinamismo a las sílabas según su tiempo de karaoke. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
-| **Karaoke Fluido** | Transiciones suaves y continuas entre sílabas, sin cortes bruscos. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
-| **Karaoke Reverso** | Sistema de desaparición progresiva basado en los tiempos originales de karaoke (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
-| **Glitch** | Aberración cromática orgánica con desplazamiento de ejes, simulando fallos digitales. | <img src="ASSETS/glitch.gif" width="220"> |
+| **Fadeworks** | Fades de entrada/salida, por alpha o color, y animaciones letra por letra. | <img src="ASSETS/Fadeworks.gif" width="220"> |
+| **Gradient** | Gradientes horizontales calculados automáticamente letra por letra, con soporte multilinea. | <img src="ASSETS/Gradient.gif" width="220"> |
+| **Karaoke con Flash** | Sincroniza destellos de color y transparencia con el ritmo del karaoke. | <img src="ASSETS/Karaoke-Brillo.gif" width="220"> |
+| **Karaoke con Movimiento** | Añade desplazamiento y dinamismo a las sílabas según su tiempo de karaoke. | <img src="ASSETS/Karaoke-Move.gif" width="220"> |
+| **Karaoke Fluido** | Transiciones suaves y continuas entre sílabas, sin cortes bruscos. | <img src="ASSETS/Karaoke-Fluido.gif" width="220"> |
+| **Karaoke Reverso** | Sistema de desaparición progresiva basado en los tiempos originales de karaoke (`\k`). | <img src="ASSETS/Karaoke-Reverso.gif" width="220"> |
+| **Glitch** | Aberración cromática orgánica con desplazamiento de ejes, simulando fallos digitales. | <img src="ASSETS/Glitch.gif" width="220"> |
 
 ### 🙏 Créditos y Base del Proyecto
 
@@ -87,13 +87,13 @@ Este proyecto hereda la licencia de **Aegisub**. Consulta el archivo `LICENSE` d
 
 | Effect | Description | Visual Demo |
 | :--- | :--- | :---: |
-| **Fadeworks** | Fade in/out, alpha or color fades, and letter-by-letter animations. | <img src="ASSETS/fadeworks.gif" width="220"> |
-| **Gradient** | Horizontal gradients automatically calculated letter-by-letter, with multi-line support. | <img src="ASSETS/gradient.gif" width="220"> |
-| **Flash Karaoke** | Syncs color and transparency flashes to the karaoke rhythm. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
-| **Motion Karaoke** | Adds movement and dynamism to syllables based on their karaoke timing. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
-| **Fluid Karaoke** | Smooth, continuous transitions between syllables, no abrupt cuts. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
-| **Reverse Karaoke** | Progressive disappearance system based on original karaoke timings (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
-| **Glitch** | Organic chromatic aberration with axis displacement, simulating digital failures. | <img src="ASSETS/glitch.gif" width="220"> |
+| **Fadeworks** | Fade in/out, alpha or color fades, and letter-by-letter animations. | <img src="ASSETS/Fadeworks.gif" width="220"> |
+| **Gradient** | Horizontal gradients automatically calculated letter-by-letter, with multi-line support. | <img src="ASSETS/Gradient.gif" width="220"> |
+| **Flash Karaoke** | Syncs color and transparency flashes to the karaoke rhythm. | <img src="ASSETS/Karaoke-Brillo.gif" width="220"> |
+| **Motion Karaoke** | Adds movement and dynamism to syllables based on their karaoke timing. | <img src="ASSETS/Karaoke-Move.gif" width="220"> |
+| **Fluid Karaoke** | Smooth, continuous transitions between syllables, no abrupt cuts. | <img src="ASSETS/Karaoke-Fluido.gif" width="220"> |
+| **Reverse Karaoke** | Progressive disappearance system based on original karaoke timings (`\k`). | <img src="ASSETS/Karaoke-Reverso.gif" width="220"> |
+| **Glitch** | Organic chromatic aberration with axis displacement, simulating digital failures. | <img src="ASSETS/Glitch.gif" width="220"> |
 
 ### 🙏 Credits & Project Foundation
 
@@ -134,13 +134,13 @@ O **TypeMotion** é uma versão modificada do Aegisub, construída especificamen
 
 | Efeito | Descrição | Demonstração Visual |
 | :--- | :--- | :---: |
-| **Fadeworks** | Fades de entrada/saída, por alpha ou cor, e animações letra por letra. | <img src="ASSETS/fadeworks.gif" width="220"> |
-| **Gradient** | Gradientes horizontais calculados automaticamente letra por letra, com suporte a múltiplas linhas. | <img src="ASSETS/gradient.gif" width="220"> |
-| **Karaokê com Flash** | Sincroniza flashes de cor e transparência com o ritmo do karaokê. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
-| **Karaokê com Movimento** | Adiciona deslocamento e dinamismo às sílabas conforme seu tempo de karaokê. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
-| **Karaokê Fluido** | Transições suaves e contínuas entre sílabas, sem cortes bruscos. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
-| **Karaokê Reverso** | Sistema de desaparecimento progressivo baseado nas marcações originais de karaokê (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
-| **Glitch** | Aberração cromática orgânica com deslocamento de eixos, simulando falhas digitais. | <img src="ASSETS/glitch.gif" width="220"> |
+| **Fadeworks** | Fades de entrada/saída, por alpha ou cor, e animações letra por letra. | <img src="ASSETS/Fadeworks.gif" width="220"> |
+| **Gradient** | Gradientes horizontais calculados automaticamente letra por letra, com suporte a múltiplas linhas. | <img src="ASSETS/Gradient.gif" width="220"> |
+| **Karaokê com Flash** | Sincroniza flashes de cor e transparência com o ritmo do karaokê. | <img src="ASSETS/Karaoke-Brillo.gif" width="220"> |
+| **Karaokê com Movimento** | Adiciona deslocamento e dinamismo às sílabas conforme seu tempo de karaokê. | <img src="ASSETS/Karaoke-Move.gif" width="220"> |
+| **Karaokê Fluido** | Transições suaves e contínuas entre sílabas, sem cortes bruscos. | <img src="ASSETS/Karaoke-Fluido.gif" width="220"> |
+| **Karaokê Reverso** | Sistema de desaparecimento progressivo baseado nas marcações originais de karaokê (`\k`). | <img src="ASSETS/Karaoke-Reverso.gif" width="220"> |
+| **Glitch** | Aberração cromática orgânica com deslocamento de eixos, simulando falhas digitais. | <img src="ASSETS/Glitch.gif" width="220"> |
 
 ### 🙏 Créditos e Base do Projeto
 
