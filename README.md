@@ -21,10 +21,15 @@
 
 <br><br>
 
-<!-- 🔗 Espacio reservado: Discord -->
-<!-- 🔗 Espacio reservado: Twitter / X -->
-<!-- 🔗 Espacio reservado: YouTube -->
-<!-- 🔗 Espacio reservado: Ko-fi / Donaciones -->
+<a href="https://discord.gg/xJhyqvDP6V">
+  <img src="https://img.shields.io/badge/Discord-Únete-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40">
+</a>
+<a href="https://x.com/SonizzIdk">
+  <img src="https://img.shields.io/badge/Twitter%20%2F%20X-Sígueme-000000?style=for-the-badge&logo=x&logoColor=white" height="40">
+</a>
+<a href="https://ko-fi.com/sonizzidk">
+  <img src="https://img.shields.io/badge/Ko--fi-Apóyame-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" height="40">
+</a>
 
 </div>
 
@@ -36,7 +41,7 @@
 
 **TypeMotion** es una versión modificada de Aegisub, construida específicamente para creadores de contenido de YouTube que trabajan con subtítulos estilizados en formato **YTT/SRV3**. En lugar de instalar Aegisub y luego buscar, configurar y actualizar decenas de automatizaciones sueltas, TypeMotion las trae integradas desde el primer inicio, junto con mejoras de interfaz pensadas para este flujo de trabajo específico.
 
-###  Efectos Incluidos
+### ✨ Efectos Incluidos
 
 | Efecto | Descripción | Demo Visual |
 | :--- | :--- | :---: |
@@ -72,8 +77,15 @@ Este proyecto hereda la licencia de **Aegisub**. Consulta el archivo `LICENSE` d
 
 ### 💬 Comunidad
 
-<!-- 🔗 Espacio reservado: agrega aquí tu Discord -->
-<!-- 🔗 Espacio reservado: agrega aquí tus redes sociales -->
+<a href="https://discord.gg/xJhyqvDP6V">
+  <img src="https://img.shields.io/badge/Discord-Únete%20al%20servidor-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40">
+</a>
+<a href="https://x.com/SonizzIdk">
+  <img src="https://img.shields.io/badge/Twitter%20%2F%20X-Sígueme-000000?style=for-the-badge&logo=x&logoColor=white" height="40">
+</a>
+<a href="https://ko-fi.com/sonizzidk">
+  <img src="https://img.shields.io/badge/Ko--fi-Apóyame-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" height="40">
+</a>
 
 ---
 
@@ -83,7 +95,7 @@ Este proyecto hereda la licencia de **Aegisub**. Consulta el archivo `LICENSE` d
 
 **TypeMotion** is a modified version of Aegisub, built specifically for YouTube content creators working with styled **YTT/SRV3** subtitles. Instead of installing Aegisub and then hunting down, configuring, and updating dozens of separate automation scripts, TypeMotion ships with them built in from the first launch, alongside interface improvements tailored to this specific workflow.
 
-###  Included Effects
+### ✨ Included Effects
 
 | Effect | Description | Visual Demo |
 | :--- | :--- | :---: |
@@ -119,8 +131,15 @@ This project inherits its license from **Aegisub**. See the `LICENSE` file in th
 
 ### 💬 Community
 
-<!-- 🔗 Placeholder: add your Discord here -->
-<!-- 🔗 Placeholder: add your social media here -->
+<a href="https://discord.gg/xJhyqvDP6V">
+  <img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40">
+</a>
+<a href="https://x.com/SonizzIdk">
+  <img src="https://img.shields.io/badge/Twitter%20%2F%20X-Follow%20me-000000?style=for-the-badge&logo=x&logoColor=white" height="40">
+</a>
+<a href="https://ko-fi.com/sonizzidk">
+  <img src="https://img.shields.io/badge/Ko--fi-Support%20me-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" height="40">
+</a>
 
 ---
 
@@ -130,7 +149,7 @@ This project inherits its license from **Aegisub**. See the `LICENSE` file in th
 
 O **TypeMotion** é uma versão modificada do Aegisub, construída especificamente para criadores de conteúdo do YouTube que trabalham com legendas estilizadas no formato **YTT/SRV3**. Em vez de instalar o Aegisub e depois procurar, configurar e atualizar dezenas de automações separadas, o TypeMotion já as traz integradas desde a primeira execução, junto com melhorias de interface pensadas para esse fluxo de trabalho específico.
 
-###  Efeitos Inclusos
+### ✨ Efeitos Inclusos
 
 | Efeito | Descrição | Demonstração Visual |
 | :--- | :--- | :---: |
@@ -166,8 +185,15 @@ Este projeto herda a licença do **Aegisub**. Consulte o arquivo `LICENSE` deste
 
 ### 💬 Comunidade
 
-<!-- 🔗 Espaço reservado: adicione seu Discord aqui -->
-<!-- 🔗 Espaço reservado: adicione suas redes sociais aqui -->
+<a href="https://discord.gg/xJhyqvDP6V">
+  <img src="https://img.shields.io/badge/Discord-Entre%20no%20servidor-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40">
+</a>
+<a href="https://x.com/SonizzIdk">
+  <img src="https://img.shields.io/badge/Twitter%20%2F%20X-Me%20siga-000000?style=for-the-badge&logo=x&logoColor=white" height="40">
+</a>
+<a href="https://ko-fi.com/sonizzidk">
+  <img src="https://img.shields.io/badge/Ko--fi-Apoie-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" height="40">
+</a>
 
 ---
 
