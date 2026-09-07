@@ -36,7 +36,7 @@
 
 **TypeMotion** es una versión modificada de Aegisub, construida específicamente para creadores de contenido de YouTube que trabajan con subtítulos estilizados en formato **YTT/SRV3**. En lugar de instalar Aegisub y luego buscar, configurar y actualizar decenas de automatizaciones sueltas, TypeMotion las trae integradas desde el primer inicio, junto con mejoras de interfaz pensadas para este flujo de trabajo específico.
 
-### ✨ Efectos Incluidos
+###  Efectos Incluidos
 
 | Efecto | Descripción | Demo Visual |
 | :--- | :--- | :---: |
@@ -83,7 +83,7 @@ Este proyecto hereda la licencia de **Aegisub**. Consulta el archivo `LICENSE` d
 
 **TypeMotion** is a modified version of Aegisub, built specifically for YouTube content creators working with styled **YTT/SRV3** subtitles. Instead of installing Aegisub and then hunting down, configuring, and updating dozens of separate automation scripts, TypeMotion ships with them built in from the first launch, alongside interface improvements tailored to this specific workflow.
 
-### ✨ Included Effects
+###  Included Effects
 
 | Effect | Description | Visual Demo |
 | :--- | :--- | :---: |
@@ -130,7 +130,7 @@ This project inherits its license from **Aegisub**. See the `LICENSE` file in th
 
 O **TypeMotion** é uma versão modificada do Aegisub, construída especificamente para criadores de conteúdo do YouTube que trabalham com legendas estilizadas no formato **YTT/SRV3**. Em vez de instalar o Aegisub e depois procurar, configurar e atualizar dezenas de automações separadas, o TypeMotion já as traz integradas desde a primeira execução, junto com melhorias de interface pensadas para esse fluxo de trabalho específico.
 
-### ✨ Efeitos Inclusos
+###  Efeitos Inclusos
 
 | Efeito | Descrição | Demonstração Visual |
 | :--- | :--- | :---: |
