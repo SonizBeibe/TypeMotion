@@ -59,7 +59,7 @@ TypeMotion no parte de cero. Este proyecto existe gracias al trabajo de:
 
 * **[Aegisub](https://github.com/Aegisub/Aegisub)** — El editor de subtítulos original en el que se basa todo este proyecto.
 * **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — De este fork se tomaron dos piezas fundamentales para TypeMotion:
-  * El **modo oscuro híbrido**, adaptado e integrado en la interfaz.
+  * El **modo oscuro experimental**, adaptado e integrado en la interfaz de forma híbrida.
   * El sistema de **Folders**, usado en TypeMotion para organizar y estructurar los efectos incluidos.
 
 Todo el reconocimiento a sus respectivos autores y colaboradores por sentar las bases sobre las que se construyó TypeMotion.
@@ -113,7 +113,7 @@ TypeMotion doesn't start from scratch. This project exists thanks to the work of
 
 * **[Aegisub](https://github.com/Aegisub/Aegisub)** — The original subtitle editor this whole project is based on.
 * **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — Two key pieces of TypeMotion were taken from this fork:
-  * The **hybrid dark mode**, adapted and integrated into the interface.
+  * The **experimental dark mode**, adapted and integrated into the interface in a hybrid form.
   * The **Folders** system, used in TypeMotion to organize and structure the included effects.
 
 Full credit goes to their respective authors and contributors for laying the groundwork TypeMotion was built on.
@@ -167,7 +167,7 @@ O TypeMotion não parte do zero. Este projeto existe graças ao trabalho de:
 
 * **[Aegisub](https://github.com/Aegisub/Aegisub)** — O editor de legendas original no qual todo este projeto se baseia.
 * **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — Deste fork foram utilizadas duas peças fundamentais para o TypeMotion:
-  * O **modo escuro híbrido**, adaptado e integrado à interface.
+  * O **modo escuro experimental**, adaptado e integrado à interface de forma híbrida.
   * O sistema de **Folders**, usado no TypeMotion para organizar e estruturar os efeitos inclusos.
 
 Todo o reconhecimento vai para seus respectivos autores e colaboradores por estabelecerem as bases sobre as quais o TypeMotion foi construído.
