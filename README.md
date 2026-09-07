@@ -1,160 +1,176 @@
-# Aegisub
+<div align="center">
 
-For binaries and general information [see the homepage](http://aegisub.org).
+# TypeMotion
+**Aegisub reinventado para subtítulos estilizados de YouTube.**
 
-The bug tracker can be found at https://github.com/TypesettingTools/Aegisub/issues.
+[![Aegisub Fork](https://img.shields.io/badge/Base-Aegisub-1E90FF?style=for-the-badge&logo=github)](https://github.com/arch1t3cht/Aegisub)
+[![YTT/SRV3](https://img.shields.io/badge/Formato-YTT%20%2F%20SRV3-red?style=for-the-badge&logo=youtube)](#)
+[![License](https://img.shields.io/badge/Licencia-Aegisub%20(BSD)-lightgrey?style=for-the-badge)](#-licencia)
 
-Support is available on [Discord](https://discord.com/invite/AZaVyPr) or [IRC](irc://irc.rizon.net/aegisub).
+*Un fork personalizado de Aegisub, enfocado 100% en la creación de subtítulos estilizados para YouTube (YTT/SRV3), con un conjunto de efectos integrados listos para usar desde la primera apertura.*
 
-## Building Aegisub
+<br>
 
-### Windows
+[🇪🇸 **Leer en Español**](#-español) &nbsp; | &nbsp; [🇺🇸 **Read in English**](#-english) &nbsp; | &nbsp; [🇧🇷 **Ler em Português**](#-português)
 
-Prerequisites:
+<br>
 
-1. Visual Studio (Community edition of any recent version is fine, needs the Windows SDK included)
-2. Python 3
-3. Meson
-4. CMake
+<a href="https://github.com/SonizBeibe/TypeMotion/releases/latest">
+  <img src="https://img.shields.io/badge/⬇️%20DESCARGAR-ÚLTIMA%20VERSIÓN-success?style=for-the-badge&logo=lua" height="45">
+</a>
 
-There are a few optional dependencies that must be installed and on your PATH:
+<br><br>
 
-1. msgfmt, to build the translations (installing from https://mlocati.github.io/articles/gettext-iconv-windows.html seems to be the easiest option)
-2. InnoSetup, to build the regular installer (iscc.exe on your PATH)
-3. 7zip, to build the regular installer (7z.exe on your PATH)
-4. Moonscript, to build the regular installer (moonc.exe on your PATH)
+<!-- 🔗 Espacio reservado: Discord -->
+<!-- 🔗 Espacio reservado: Twitter / X -->
+<!-- 🔗 Espacio reservado: YouTube -->
+<!-- 🔗 Espacio reservado: Ko-fi / Donaciones -->
 
-All other dependencies are either stored in the repository or are included as submodules.
+</div>
 
-Building:
+---
 
-1. Clone Aegisub's repository: `git clone https://github.com/TypesettingTools/Aegisub.git`
-2. From the Visual Studio "x64 Native Tools Command Prompt", generate the build directory: `meson build -Ddefault_library=static` (if building for release, add `--buildtype=release`)
-3. Build with `cd build` and `ninja`
+<h2 id="-español">🇪🇸 Documentación en Español</h2>
 
-You should now have a binary: `aegisub.exe`.
+### 📖 ¿Qué es TypeMotion?
 
-Installer:
+**TypeMotion** es una versión modificada de Aegisub, construida específicamente para creadores de contenido de YouTube que trabajan con subtítulos estilizados en formato **YTT/SRV3**. En lugar de instalar Aegisub y luego buscar, configurar y actualizar decenas de automatizaciones sueltas, TypeMotion las trae integradas desde el primer inicio, junto con mejoras de interfaz pensadas para este flujo de trabajo específico.
 
-You can generate the installer with `ninja win-installer` after a successful build. This assumes a working internet connection and installation of the optional dependencies.
+### ✨ Efectos Incluidos
 
-You can generate the portable zip with `ninja win-portable` after a successful build.
+| Efecto | Descripción | Demo Visual |
+| :--- | :--- | :---: |
+| **Fadeworks** | Fades de entrada/salida, por alpha o color, y animaciones letra por letra. | <img src="ASSETS/fadeworks.gif" width="220"> |
+| **Gradient** | Gradientes horizontales calculados automáticamente letra por letra, con soporte multilinea. | <img src="ASSETS/gradient.gif" width="220"> |
+| **Karaoke con Flash** | Sincroniza destellos de color y transparencia con el ritmo del karaoke. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
+| **Karaoke con Movimiento** | Añade desplazamiento y dinamismo a las sílabas según su tiempo de karaoke. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
+| **Karaoke Fluido** | Transiciones suaves y continuas entre sílabas, sin cortes bruscos. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
+| **Karaoke Reverso** | Sistema de desaparición progresiva basado en los tiempos originales de karaoke (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
+| **Glitch** | Aberración cromática orgánica con desplazamiento de ejes, simulando fallos digitales. | <img src="ASSETS/glitch.gif" width="220"> |
 
-### OS X
+### 🙏 Créditos y Base del Proyecto
 
-A vaguely recent version of Xcode and the corresponding command-line tools are required.
+TypeMotion no parte de cero. Este proyecto existe gracias al trabajo de:
 
-For personal usage, you can use pip and homebrew to install almost all of Aegisub's dependencies:
+* **[Aegisub](https://github.com/Aegisub/Aegisub)** — El editor de subtítulos original en el que se basa todo este proyecto.
+* **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — De este fork se tomaron dos piezas fundamentales para TypeMotion:
+  * El **modo oscuro híbrido**, adaptado e integrado en la interfaz.
+  * El sistema de **Folders**, usado en TypeMotion para organizar y estructurar los efectos incluidos.
 
-    pip3 install meson      # or brew install meson if you installed Python via brew
-    brew install cmake ninja pkg-config  libass boost zlib ffms2 fftw hunspell uchardet
-    export LDFLAGS="-L/usr/local/opt/icu4c/lib"
-    export CPPFLAGS="-I/usr/local/opt/icu4c/include"
-    export PKG_CONFIG_PATH="/usr/local/opt/icu4c/lib/pkgconfig"
+Todo el reconocimiento a sus respectivos autores y colaboradores por sentar las bases sobre las que se construyó TypeMotion.
 
-When compiling on Apple Silicon, replace `/usr/local` with `/opt/homebrew`.
+### ⚙️ Instalación
 
-Once the dependencies are installed, build Aegisub with `meson build && meson compile -C build`.
+1. Ve a la página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) y descarga la última versión.
+2. Extrae el contenido en la carpeta de tu preferencia.
+3. Ejecuta `TypeMotion.exe` (o el ejecutable correspondiente).
+4. Los efectos ya vienen integrados en el menú `Automatización`, listos para usar sin configuración adicional.
 
-#### Build dmg
+### ⚖️ Licencia
 
-```bash
-meson build_static -Ddefault_library=static -Dbuildtype=debugoptimized -Dbuild_osx_bundle=true -Dlocal_boost=true
-meson compile -C build_static
-meson test -C build_static --verbose
-meson compile osx-bundle -C build_static
-meson compile osx-build-dmg -C build_static
-```
+Este proyecto hereda la licencia de **Aegisub**. Consulta el archivo `LICENSE` de este repositorio para más detalles.
 
-### Linux or other
+### 💬 Comunidad
 
-#### Build dependencies for Debian-based systems
+<!-- 🔗 Espacio reservado: agrega aquí tu Discord -->
+<!-- 🔗 Espacio reservado: agrega aquí tus redes sociales -->
 
-```
-compiler:    build-essential
-pkgconfig:   pkg-config  or  pkgconf
-meson:       meson ninja-build
-gettext:     gettext intltool
-fontconfig:  libfontconfig1-dev
-libass:      libass-dev
-boost:       libboost-chrono-dev libboost-locale-dev libboost-regex-dev libboost-system-dev libboost-thread-dev
-zlib:        zlib1g-dev
-WxWidgets:   wx3.2-headers libwxgtk3.2-dev
-ICU:         icu-devtools libicu-dev
-pulse-audio: libpulse-dev
-ALSA:        libasound2-dev
-OpenAL:      libopenal-dev
-ffms2:       libffms2-dev
-fftw3:       libfftw3-dev
-hunspell:    libhunspell-dev
-uchardet:    libuchardet-dev
-libcurl:     libcurl4-openssl-dev  or  libcurl4-gnutls-dev
-opengl:      libgl1-mesa-dev
-gtest:       libgtest-dev
-gmock:       libgmock-dev
-libportal:   libportal-gtk3-dev
-```
+---
 
-I.e. to install on Ubuntu 24.04 run this command:
-``` bash
-sudo apt install build-essential pkg-config meson ninja-build gettext intltool libfontconfig1-dev libass-dev libboost-chrono-dev libboost-locale-dev libboost-regex-dev libboost-system-dev libboost-thread-dev zlib1g-dev wx3.2-headers libwxgtk3.2-dev icu-devtools libicu-dev libpulse-dev libasound2-dev libopenal-dev libffms2-dev libfftw3-dev libhunspell-dev libuchardet-dev libcurl4-gnutls-dev libgl1-mesa-dev libgtest-dev libgmock-dev libportal-gtk3-dev
-```
+<h2 id="-english">🇺🇸 English Documentation</h2>
 
-#### Build Aegisub
+### 📖 What is TypeMotion?
 
-``` bash
-meson setup build --prefix=/usr/local --buildtype=release --strip -Dsystem_luajit=false -Ddefault_library=static
-meson compile -C build
-meson install -C build --skip-subprojects luajit
-```
+**TypeMotion** is a modified version of Aegisub, built specifically for YouTube content creators working with styled **YTT/SRV3** subtitles. Instead of installing Aegisub and then hunting down, configuring, and updating dozens of separate automation scripts, TypeMotion ships with them built in from the first launch, alongside interface improvements tailored to this specific workflow.
 
-#### Packaging
-If you are packaging Aegisub for a Linux distribution, here are a few things you may need to know:
-- Aegisub cannot be built with LTO (See: https://github.com/TypesettingTools/Aegisub/issues/290).
-- Aegisub depends on LuaJIT and *requires* LuaJIT to be build with Lua 5.2 compatibility enabled.
-  We are aware that most distributions do not compile LuaJIT with this flag, and that this complicates packaging for them, see https://github.com/TypesettingTools/Aegisub/issues/239 for a detailed discussion of the situation.
+### ✨ Included Effects
 
-  Like for its other dependencies, Aegisub includes a meson subproject for LuaJIT that can be used to statically link a version of LuaJIT with 5.2 compatibility.
-  For distributions that do not allow downloading additional sources at build time, the downloaded LuaJIT subproject is included in the source tarballs distributed with releases.
-- When linked against libstdc++, Aegisub needs libstdc++ 6.0.32 or later due to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048.
-  Aegisub's tests will detect this bug, but if you're not running tests on packaging you'll need to make sure the libstdc++ version is recent enough.
-- Aegisub uses OpenGL through wxWidgets. For Aegisub to work directly on Wayland (as opposed to Xwayland), wxWidgets needs to be built with EGL enabled.
-  Aegisub will automatically fall back to X11 when it detects missing EGL support.
+| Effect | Description | Visual Demo |
+| :--- | :--- | :---: |
+| **Fadeworks** | Fade in/out, alpha or color fades, and letter-by-letter animations. | <img src="ASSETS/fadeworks.gif" width="220"> |
+| **Gradient** | Horizontal gradients automatically calculated letter-by-letter, with multi-line support. | <img src="ASSETS/gradient.gif" width="220"> |
+| **Flash Karaoke** | Syncs color and transparency flashes to the karaoke rhythm. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
+| **Motion Karaoke** | Adds movement and dynamism to syllables based on their karaoke timing. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
+| **Fluid Karaoke** | Smooth, continuous transitions between syllables, no abrupt cuts. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
+| **Reverse Karaoke** | Progressive disappearance system based on original karaoke timings (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
+| **Glitch** | Organic chromatic aberration with axis displacement, simulating digital failures. | <img src="ASSETS/glitch.gif" width="220"> |
 
-The following commands are an example for how to build Aegisub with the goal of creating a distribution package:
+### 🙏 Credits & Project Foundation
 
-```bash
-meson subprojects download luajit              # Or use the tarball
-meson subprojects packagefiles --apply luajit
+TypeMotion doesn't start from scratch. This project exists thanks to the work of:
 
-meson setup builddir --wrap-mode=nodownload --prefix=/usr --buildtype=release -Dsystem_luajit=false -Ddefault_library=static -Dtests=false
+* **[Aegisub](https://github.com/Aegisub/Aegisub)** — The original subtitle editor this whole project is based on.
+* **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — Two key pieces of TypeMotion were taken from this fork:
+  * The **hybrid dark mode**, adapted and integrated into the interface.
+  * The **Folders** system, used in TypeMotion to organize and structure the included effects.
 
-meson compile -C builddir
-meson install -C builddir --skip-subprojects luajit
-```
+Full credit goes to their respective authors and contributors for laying the groundwork TypeMotion was built on.
 
-## Updating Moonscript
+### ⚙️ Installation
 
-From within the Moonscript repository, run `bin/moon bin/splat.moon -l moonscript moonscript/ > bin/moonscript.lua`.
-Open the newly created `bin/moonscript.lua`, and within it make the following changes:
+1. Go to the [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) page and download the latest version.
+2. Extract the contents to a folder of your choice.
+3. Run `TypeMotion.exe` (or the corresponding executable).
+4. The effects are already integrated into the `Automation` menu, ready to use with no extra setup.
 
-1. Prepend the final line of the file, `package.preload["moonscript"]()`, with a `return`, producing `return package.preload["moonscript"]()`.
-2. Within the function at `package.preload['moonscript.base']`, remove references to `moon_loader`, `insert_loader`, and `remove_loader`. This means removing their declarations, definitions, and entries in the returned table.
-3. Within the function at `package.preload['moonscript']`, remove the line `_with_0.insert_loader()`.
+### ⚖️ License
 
-The file is now ready for use, to be placed in `automation/include` within the Aegisub repo.
+This project inherits its license from **Aegisub**. See the `LICENSE` file in this repository for details.
 
-## Running Doxygen
+### 💬 Community
 
-You can run Doxygen with the following command:
+<!-- 🔗 Placeholder: add your Discord here -->
+<!-- 🔗 Placeholder: add your social media here -->
 
-```bash
-doxygen docs/doxygen.cfg
-```
+---
 
-This will generate API documentation in `docs/generated/api/html/`.
+<h2 id="-português">🇧🇷 Documentação em Português</h2>
 
-## License
+### 📖 O que é o TypeMotion?
 
-All files in this repository are licensed under various GPL-compatible BSD-style licenses; see LICENCE and the individual source files for more information.
-The official Windows and OS X builds are GPLv2 due to including fftw3.
+O **TypeMotion** é uma versão modificada do Aegisub, construída especificamente para criadores de conteúdo do YouTube que trabalham com legendas estilizadas no formato **YTT/SRV3**. Em vez de instalar o Aegisub e depois procurar, configurar e atualizar dezenas de automações separadas, o TypeMotion já as traz integradas desde a primeira execução, junto com melhorias de interface pensadas para esse fluxo de trabalho específico.
+
+### ✨ Efeitos Inclusos
+
+| Efeito | Descrição | Demonstração Visual |
+| :--- | :--- | :---: |
+| **Fadeworks** | Fades de entrada/saída, por alpha ou cor, e animações letra por letra. | <img src="ASSETS/fadeworks.gif" width="220"> |
+| **Gradient** | Gradientes horizontais calculados automaticamente letra por letra, com suporte a múltiplas linhas. | <img src="ASSETS/gradient.gif" width="220"> |
+| **Karaokê com Flash** | Sincroniza flashes de cor e transparência com o ritmo do karaokê. | <img src="ASSETS/karaoke_flash.gif" width="220"> |
+| **Karaokê com Movimento** | Adiciona deslocamento e dinamismo às sílabas conforme seu tempo de karaokê. | <img src="ASSETS/karaoke_movimiento.gif" width="220"> |
+| **Karaokê Fluido** | Transições suaves e contínuas entre sílabas, sem cortes bruscos. | <img src="ASSETS/karaoke_fluido.gif" width="220"> |
+| **Karaokê Reverso** | Sistema de desaparecimento progressivo baseado nas marcações originais de karaokê (`\k`). | <img src="ASSETS/karaoke_reverso.gif" width="220"> |
+| **Glitch** | Aberração cromática orgânica com deslocamento de eixos, simulando falhas digitais. | <img src="ASSETS/glitch.gif" width="220"> |
+
+### 🙏 Créditos e Base do Projeto
+
+O TypeMotion não parte do zero. Este projeto existe graças ao trabalho de:
+
+* **[Aegisub](https://github.com/Aegisub/Aegisub)** — O editor de legendas original no qual todo este projeto se baseia.
+* **[arch1t3cht/Aegisub (fork)](https://github.com/arch1t3cht/Aegisub)** — Deste fork foram utilizadas duas peças fundamentais para o TypeMotion:
+  * O **modo escuro híbrido**, adaptado e integrado à interface.
+  * O sistema de **Folders**, usado no TypeMotion para organizar e estruturar os efeitos inclusos.
+
+Todo o reconhecimento vai para seus respectivos autores e colaboradores por estabelecerem as bases sobre as quais o TypeMotion foi construído.
+
+### ⚙️ Instalação
+
+1. Acesse a página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) e baixe a versão mais recente.
+2. Extraia o conteúdo em uma pasta de sua preferência.
+3. Execute o `TypeMotion.exe` (ou o executável correspondente).
+4. Os efeitos já vêm integrados no menu `Automação`, prontos para usar sem configuração adicional.
+
+### ⚖️ Licença
+
+Este projeto herda a licença do **Aegisub**. Consulte o arquivo `LICENSE` deste repositório para mais detalhes.
+
+### 💬 Comunidade
+
+<!-- 🔗 Espaço reservado: adicione seu Discord aqui -->
+<!-- 🔗 Espaço reservado: adicione suas redes sociais aqui -->
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by <strong><a href="https://github.com/SonizBeibe">Soniz</a></strong></p>
+</div>
