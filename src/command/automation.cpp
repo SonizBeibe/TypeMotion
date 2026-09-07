@@ -93,8 +93,6 @@ struct meta final : public Command {
 			else
 				cmd::call("am/reload/autoload", c);
 		}
-		else
-			cmd::call("am/manager", c);
 	}
 };
 
@@ -103,7 +101,7 @@ struct meta final : public Command {
 namespace cmd {
 	void init_automation() {
 		reg(std::make_unique<meta>());
-		reg(std::make_unique<open_manager>());
+		// reg(std::make_unique<open_manager>());
 		reg(std::make_unique<reload_all>());
 		reg(std::make_unique<reload_autoload>());
 	}

@@ -25,10 +25,6 @@
             "text": "&Audio"
         },
         {
-            "special": "automation",
-            "text": "&Tools"
-        },
-        {
             "submenu": "main/view",
             "text": "Vie&w"
         },
@@ -62,6 +58,10 @@
         },
         {
             "command": "tool/export"
+        },
+        {
+            "command": "tool/export/ytt",
+            "text": "Export YTT..."
         },
         {
             "recent": "Subtitle"

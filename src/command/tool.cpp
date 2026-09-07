@@ -63,6 +63,30 @@ struct tool_export final : public Command {
 	}
 };
 
+struct tool_export_ytt final : public Command {
+	CMD_NAME("tool/export/ytt")
+	CMD_ICON(export_menu)
+	STR_MENU("&Export YTT...")
+	STR_DISP("Export YTT")
+	STR_HELP("Export subtitles to YTT format")
+
+	void operator()(agi::Context *c) override {
+		auto final_ytt_path = SaveFileSelector(_("Export YTT File"), "", "", "ytt", "", c->parent);
+		if (final_ytt_path.empty()) return;
+
+		auto temp_ass_path = c->subsController->Filename().parent_path() / "temp_export.ass";
+		if (c->subsController->Filename().empty()) {
+			temp_ass_path = agi::fs::path("temp_export.ass");
+		}
+
+		const SubtitleFormat *writer = SubtitleFormat::GetWriter(temp_ass_path);
+		if (writer) {
+			writer->ExportFile(c->ass.get(), temp_ass_path, c->project->Timecodes(), "");
+			wxExecute(wxString::Format("\"subprojects/ytsubconverter.exe\" \"%s\" \"%s\"", temp_ass_path.string().c_str(), final_ytt_path.string().c_str()));
+		}
+	}
+};
+
 struct tool_font_collector final : public Command {
 	CMD_NAME("tool/font_collector")
 	CMD_ICON(font_collector_button)
@@ -265,6 +289,7 @@ struct tool_translation_assistant_insert final : public tool_translation_assista
 namespace cmd {
 	void init_tool() {
 		reg(std::make_unique<tool_export>());
+		reg(std::make_unique<tool_export_ytt>());
 		reg(std::make_unique<tool_font_collector>());
 		reg(std::make_unique<tool_line_select>());
 		reg(std::make_unique<tool_resampleres>());
