@@ -80,6 +80,7 @@ class FoldInfo {
 	friend class FoldController;
 
 public:
+	AssDialogue *getCounterpart() const { return counterpart; }
 	bool hasFold() const { return valid; }
 	bool isFolded() const { return collapsed; }
 	bool isEnd() const { return side; }

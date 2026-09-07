@@ -29,10 +29,6 @@
             "text": "&Audio"
         },
         {
-            "special": "automation",
-            "text": "A&utomation"
-        },
-        {
             "submenu": "main/window",
             "text": "Window"
         },
@@ -79,6 +75,10 @@
         {
             "command": "tool/export",
             "text": "Export As..."
+        },
+        {
+            "command": "tool/export/ytt",
+            "text": "Export YTT..."
         },
         {},
         {

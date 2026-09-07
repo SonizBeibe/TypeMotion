@@ -526,8 +526,8 @@ namespace menu {
 			}
 			else {
 				read_entry(item, "special", &submenu);
-				if (submenu == "automation")
-					menu->Append(new AutomationMenu(c, &menu->cm), wxGetTranslation(to_wx(disp)));
+				// if (submenu == "automation")
+				//	menu->Append(new AutomationMenu(c, &menu->cm), wxGetTranslation(to_wx(disp)));
 			}
 		}
 

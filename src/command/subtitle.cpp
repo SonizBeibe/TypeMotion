@@ -137,6 +137,12 @@ struct subtitle_insert_after final : public validate_nonempty_selection {
 
 	void operator()(agi::Context *c) override {
 		AssDialogue *active_line = c->selectionController->GetActiveLine();
+		while (active_line->Fold.getFoldOpener()) {
+			active_line = active_line->Fold.getFoldOpener();
+		}
+		if (active_line->Fold.isFolded() && active_line->Fold.getCounterpart()) {
+			active_line = active_line->Fold.getCounterpart();
+		}
 
 		auto new_line = new AssDialogue;
 		new_line->Style = active_line->Style;
@@ -182,6 +188,9 @@ struct subtitle_insert_before final : public validate_nonempty_selection {
 
 	void operator()(agi::Context *c) override {
 		AssDialogue *active_line = c->selectionController->GetActiveLine();
+		while (active_line->Fold.getFoldOpener()) {
+			active_line = active_line->Fold.getFoldOpener();
+		}
 
 		auto new_line = new AssDialogue;
 		new_line->Style = active_line->Style;
