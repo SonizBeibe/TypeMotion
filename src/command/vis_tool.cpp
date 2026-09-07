@@ -331,10 +331,7 @@ namespace cmd {
 	void init_visual_tools() {
 		reg(std::make_unique<visual_mode_cross>());
 		reg(std::make_unique<visual_mode_drag>());
-		reg(std::make_unique<visual_mode_rotate_z>());
-		reg(std::make_unique<visual_mode_rotate_xy>());
 		reg(std::make_unique<visual_mode_perspective>());
-		reg(std::make_unique<visual_mode_scale>());
 		reg(std::make_unique<visual_mode_clip>());
 		reg(std::make_unique<visual_mode_vector_clip>());
 

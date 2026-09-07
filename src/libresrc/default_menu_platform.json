@@ -25,6 +25,10 @@
             "text": "&Audio"
         },
         {
+            "special": "automation",
+            "text": "&Tools"
+        },
+        {
             "submenu": "main/view",
             "text": "Vie&w"
         },
