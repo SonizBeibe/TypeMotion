@@ -15,8 +15,8 @@
 
 <br>
 
-<a href="https://github.com/SonizBeibe/TypeMotion/releases/latest">
-  <img src="https://img.shields.io/badge/⬇️%20DESCARGAR-ÚLTIMA%20VERSIÓN-success?style=for-the-badge&logo=lua" height="45">
+<a href="https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2">
+  <img src="https://img.shields.io/badge/⬇️%20DESCARGAR-PreBuild%20v1.0.2-success?style=for-the-badge&logo=lua" height="45">
 </a>
 
 <br><br>
@@ -66,7 +66,7 @@ Todo el reconocimiento a sus respectivos autores y colaboradores por sentar las 
 
 ### ⚙️ Instalación
 
-1. Ve a la página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) y descarga la última versión.
+1. Ve a la página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) y descarga la última versión.
 2. Extrae el contenido en la carpeta de tu preferencia.
 3. Ejecuta `TypeMotion.exe` (o el ejecutable correspondiente).
 4. Los efectos ya vienen integrados en el menú `Automatización`, listos para usar sin configuración adicional.
@@ -120,7 +120,7 @@ Full credit goes to their respective authors and contributors for laying the gro
 
 ### ⚙️ Installation
 
-1. Go to the [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) page and download the latest version.
+1. Go to the [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) page and download the latest version.
 2. Extract the contents to a folder of your choice.
 3. Run `TypeMotion.exe` (or the corresponding executable).
 4. The effects are already integrated into the `Automation` menu, ready to use with no extra setup.
@@ -174,7 +174,7 @@ Todo o reconhecimento vai para seus respectivos autores e colaboradores por esta
 
 ### ⚙️ Instalação
 
-1. Acesse a página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/latest) e baixe a versão mais recente.
+1. Acesse a página de [**Releases**](https://github.com/SonizBeibe/TypeMotion/releases/tag/PreBuild-1.0.2) e baixe a versão mais recente.
 2. Extraia o conteúdo em uma pasta de sua preferência.
 3. Execute o `TypeMotion.exe` (ou o executável correspondente).
 4. Os efeitos já vêm integrados no menu `Automação`, prontos para usar sem configuração adicional.
