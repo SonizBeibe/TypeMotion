@@ -3,7 +3,7 @@
 # TypeMotion
 **Aegisub reinventado para subtítulos estilizados de YouTube.**
 
-[![Aegisub Fork](https://img.shields.io/badge/Base-Aegisub-1E90FF?style=for-the-badge&logo=github)](https://github.com/arch1t3cht/Aegisub)
+[![Aegisub Fork](https://img.shields.io/badge/Base-arch1t3cht-1E90FF?style=for-the-badge&logo=github)](#)
 [![YTT/SRV3](https://img.shields.io/badge/Formato-YTT%20%2F%20SRV3-red?style=for-the-badge&logo=youtube)](#)
 [![License](https://img.shields.io/badge/Licencia-Aegisub%20(BSD)-lightgrey?style=for-the-badge)](#-licencia)
 
