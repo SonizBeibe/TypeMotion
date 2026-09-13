@@ -105,6 +105,7 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 : wxPanel(parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | (OPT_GET("App/Dark Mode")->GetBool() ? wxBORDER_STATIC : wxRAISED_BORDER), "SubsEditBox")
 , c(context)
 , undo_timer(GetEventHandler())
+, typing_timer(GetEventHandler())
 {
 	using std::bind;
 
@@ -226,7 +227,13 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 
 	Bind(wxEVT_CHAR_HOOK, &SubsEditBox::OnKeyDown, this);
 	Bind(wxEVT_SIZE, &SubsEditBox::OnSize, this);
-	Bind(wxEVT_TIMER, [this](wxTimerEvent&) { commit_id = -1; });
+	undo_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { commit_id = -1; });
+	typing_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
+		if (line && edit_ctrl->GetTextRaw().data() != line->Text.get()) {
+			CommitText(_("modify text"));
+			UpdateCharacterCount(line->Text);
+		}
+	});
 
 	wxSizeEvent evt;
 	OnSize(evt);
@@ -443,8 +450,7 @@ void SubsEditBox::OnChange(wxStyledTextEvent &event) {
 	if (line && edit_ctrl->GetTextRaw().data() != line->Text.get()) {
 		if (event.GetModificationType() & wxSTC_STARTACTION)
 			commit_id = -1;
-		CommitText(_("modify text"));
-		UpdateCharacterCount(line->Text);
+		typing_timer.Start(400, wxTIMER_ONE_SHOT);
 	}
 }
 
