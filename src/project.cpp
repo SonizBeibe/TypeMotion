@@ -290,8 +290,13 @@ void Project::LoadAudio(agi::fs::path path) {
 }
 
 void Project::CloseAudio() {
+	if (audio_provider) {
+		::CleanCache(config::path->Decode("?local/ffms2cache/"), "*.ffindex", OPT_GET("Provider/FFmpegSource/Cache/Size")->GetInt(), OPT_GET("Provider/FFmpegSource/Cache/Files")->GetInt());
+	}
 	AnnounceAudioProviderModified(nullptr);
-	audio_provider.reset();
+	if (audio_provider) {
+		audio_provider.reset();
+	}
 	SetPath(audio_file, "?audio", "", "");
 }
 
@@ -353,8 +358,14 @@ void Project::LoadVideo(agi::fs::path path) {
 }
 
 void Project::CloseVideo() {
+	if (video_provider) {
+		// Clean up the ffms2 cache before destroying the provider
+		::CleanCache(config::path->Decode("?local/ffms2cache/"), "*.ffindex", OPT_GET("Provider/FFmpegSource/Cache/Size")->GetInt(), OPT_GET("Provider/FFmpegSource/Cache/Files")->GetInt());
+	}
 	AnnounceVideoProviderModified(nullptr);
-	video_provider.reset();
+	if (video_provider) {
+		video_provider.reset();
+	}
 	SetPath(video_file, "?video", "", "");
 	video_has_subtitles = false;
 	context->ass->Properties.ar_mode = 0;
