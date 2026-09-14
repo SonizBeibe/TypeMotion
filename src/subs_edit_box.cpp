@@ -105,7 +105,7 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 : wxPanel(parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | (OPT_GET("App/Dark Mode")->GetBool() ? wxBORDER_STATIC : wxRAISED_BORDER), "SubsEditBox")
 , c(context)
 , undo_timer(GetEventHandler())
-, typing_timer(GetEventHandler())
+
 {
 	using std::bind;
 
@@ -228,12 +228,7 @@ SubsEditBox::SubsEditBox(wxWindow *parent, agi::Context *context)
 	Bind(wxEVT_CHAR_HOOK, &SubsEditBox::OnKeyDown, this);
 	Bind(wxEVT_SIZE, &SubsEditBox::OnSize, this);
 	undo_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { commit_id = -1; });
-	typing_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
-		if (line && edit_ctrl->GetTextRaw().data() != line->Text.get()) {
-			CommitText(_("modify text"));
-			UpdateCharacterCount(line->Text);
-		}
-	});
+
 
 	wxSizeEvent evt;
 	OnSize(evt);
@@ -450,13 +445,14 @@ void SubsEditBox::OnChange(wxStyledTextEvent &event) {
 	if (line && edit_ctrl->GetTextRaw().data() != line->Text.get()) {
 		if (event.GetModificationType() & wxSTC_STARTACTION)
 			commit_id = -1;
-		typing_timer.Start(400, wxTIMER_ONE_SHOT);
+		CommitText(_("modify text"));
+		UpdateCharacterCount(line->Text);
 	}
 }
 
 void SubsEditBox::Commit(wxString const& desc, int type, bool amend, AssDialogue *line) {
 	file_changed_slot.Block();
-	commit_id = c->ass->Commit(desc, type, (amend && desc == last_commit_type) ? commit_id : -1, line);
+	commit_id = c->ass->Commit(desc, type, amend ? commit_id : -1, line);
 	file_changed_slot.Unblock();
 	last_commit_type = desc;
 	last_time_commit_type = -1;

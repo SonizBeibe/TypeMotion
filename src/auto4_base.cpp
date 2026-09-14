@@ -28,6 +28,13 @@
 // Aegisub Project http://www.aegisub.org/
 
 #include "auto4_base.h"
+#include <curl/curl.h>
+#include <libaegisub/io.h>
+#include <libaegisub/make_unique.h>
+#include <libaegisub/format.h>
+#include "libresrc/libresrc.h"
+#include <libaegisub/json.h>
+
 
 #include "ass_file.h"
 #include "ass_style.h"
@@ -311,34 +318,137 @@ namespace Automation4 {
 		Reload();
 	}
 
+
+// Helper to write curl data to a string
+static size_t SyncWriteToStringCb(char *contents, size_t size, size_t nmemb, std::string *s) {
+	s->append(contents, size * nmemb);
+	return size * nmemb;
+}
+
+// Helper to write curl data to a file
+static size_t SyncWriteToFileCb(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
+static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
+	if (dirnames.empty()) return;
+
+	CURL *curl = curl_easy_init();
+	if (!curl) return;
+
+	curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/SonizBeibe/TypeMotion-Dist/contents/tools");
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "TypeMotion AutoUpdater");
+
+	std::string result;
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, SyncWriteToStringCb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
+
+	CURLcode res_code = curl_easy_perform(curl);
+
+	long http_code = 0;
+	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+	if (res_code == CURLE_OK && http_code == 200) {
+		try {
+			std::stringstream ss(result);
+			json::UnknownElement root;
+			json::Reader::Read(root, ss);
+
+			if (root.GetType() != json::UnknownElement::Array) return;
+			json::Array& arr = static_cast<json::Array&>(root);
+
+			std::vector<std::pair<std::string, std::string>> remote_files; // name, download_url
+			for (auto const& item : arr) {
+				json::Object& obj = static_cast<json::Object&>(item);
+				auto name_it = obj.find("name");
+				auto url_it = obj.find("download_url");
+				if (name_it != obj.end() && url_it != obj.end()) {
+					if (name_it->second.GetType() == json::UnknownElement::String && url_it->second.GetType() == json::UnknownElement::String) {
+						std::string name = static_cast<json::String const&>(name_it->second);
+						std::string url = static_cast<json::String const&>(url_it->second);
+						if (name.length() > 4 && name.substr(name.length() - 4) == ".lua") {
+							remote_files.push_back({name, url});
+						}
+					}
+				}
+			}
+
+			// Process each directory in the autoload path
+			for (auto const& dirname : dirnames) {
+				if (!agi::fs::DirectoryExists(dirname)) continue;
+
+				std::set<std::string> local_files;
+				for (auto filename : agi::fs::DirectoryIterator(dirname, "*.lua")) {
+					local_files.insert(filename.string());
+				}
+
+				// Remove local files not in remote
+				for (auto const& local_file : local_files) {
+					bool found = false;
+					for (auto const& remote_file : remote_files) {
+						if (remote_file.first == local_file) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						agi::fs::Remove(dirname / local_file);
+					}
+				}
+
+				// Download remote files not in local
+				for (auto const& remote_file : remote_files) {
+					if (local_files.find(remote_file.first) == local_files.end()) {
+						#ifdef _WIN32
+						FILE *fp = _wfopen((dirname / remote_file.first).wstring().c_str(), L"wb");
+#else
+						FILE *fp = fopen((dirname / remote_file.first).string().c_str(), "wb");
+#endif
+						if (fp) {
+							curl_easy_setopt(curl, CURLOPT_URL, remote_file.second.c_str());
+							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, SyncWriteToFileCb);
+							curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+							curl_easy_perform(curl);
+							fclose(fp);
+						}
+					}
+				}
+			}
+		} catch (...) {
+			// Ignore parse errors or other issues
+		}
+	}
+	curl_easy_cleanup(curl);
+}
+
 	void AutoloadScriptManager::Reload()
 	{
 		scripts.clear();
 
-		std::vector<std::future<std::unique_ptr<Script>>> script_futures;
-
 		std::set<agi::fs::path> dirnames;
+		int error_count = 0;
+		int warning_count = 0;
+
 		for (auto tok : agi::Split(path, '|')) {
 			auto dirname = config::path->Decode(std::string(tok));
 			if (!agi::fs::DirectoryExists(dirname)) continue;
 
 			if (dirnames.count(dirname)) continue;
 			dirnames.insert(dirname);
-
-			for (auto filename : agi::fs::DirectoryIterator(dirname, "*.*"))
-				script_futures.emplace_back(std::async(std::launch::async, [=] {
-					return ScriptFactory::CreateFromFile(dirname/filename, false, false);
-				}));
 		}
 
-		int error_count = 0;
-		int warning_count = 0;		// Count of scripts that have warnings (as opposed to count of all warnings)
-		for (auto& future : script_futures) {
-			auto s = future.get();
-			if (s) {
-				if (!s->GetLoadedState()) ++error_count;
-				if (!s->GetWarnings().empty()) ++warning_count;
-				scripts.emplace_back(std::move(s));
+		SyncAutomationScripts(dirnames);
+
+		for (auto const& dirname : dirnames) {
+			for (auto filename : agi::fs::DirectoryIterator(dirname, "*.*")) {
+				auto s = ScriptFactory::CreateFromFile(dirname/filename, false, false);
+				if (s) {
+					if (!s->GetLoadedState()) ++error_count;
+					if (!s->GetWarnings().empty()) ++warning_count;
+					scripts.emplace_back(std::move(s));
+				}
 			}
 		}
 

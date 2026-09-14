@@ -128,7 +128,6 @@ class SubsEditBox final : public wxPanel {
 	/// Timer to stop coalescing changes after a break with no edits
 	wxTimer undo_timer;
 
-	wxTimer typing_timer;
 
 	/// The start and end times of the selected lines without changes made to
 	/// avoid negative durations, so that they can be restored if future changes
