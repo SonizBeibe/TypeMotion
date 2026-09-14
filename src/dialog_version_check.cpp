@@ -33,6 +33,7 @@
 #include "format.h"
 #include "options.h"
 #include "version.h"
+#include "main.h"
 
 #include <libaegisub/ass/string_codec.h>
 #include <libaegisub/dispatch.h>
@@ -40,6 +41,8 @@
 #include <libaegisub/line_iterator.h>
 #include <libaegisub/scoped_ptr.h>
 #include <libaegisub/split.h>
+#include <libaegisub/json.h>
+#include <libaegisub/io.h>
 
 #include <ctime>
 #include <curl/curl.h>
@@ -59,6 +62,8 @@
 #include <wx/stattext.h>
 #include <wx/string.h>
 #include <wx/textctrl.h>
+#include <wx/stdpaths.h>
+
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
@@ -354,8 +359,137 @@ void DoCheck(bool interactive) {
 }
 }
 
+
+
+static bool VersionIsNewer(const std::string& remote_tag, const std::string& local_tag) {
+	int r_maj = 0, r_min = 0, r_patch = 0;
+	int l_maj = 0, l_min = 0, l_patch = 0;
+
+	const char* r_str = remote_tag.c_str();
+	const char* l_str = local_tag.c_str();
+	if (r_str[0] == 'v' || r_str[0] == 'V') r_str++;
+	if (l_str[0] == 'v' || l_str[0] == 'V') l_str++;
+
+	sscanf(r_str, "%d.%d.%d", &r_maj, &r_min, &r_patch);
+	sscanf(l_str, "%d.%d.%d", &l_maj, &l_min, &l_patch);
+
+	if (r_maj > l_maj) return true;
+	if (r_maj == l_maj && r_min > l_min) return true;
+	if (r_maj == l_maj && r_min == l_min && r_patch > l_patch) return true;
+	return false;
+}
+
+static size_t OTAWriteToStringCb(char *contents, size_t size, size_t nmemb, std::string *s) {
+	s->append(contents, size * nmemb);
+	return size * nmemb;
+}
+
+static size_t OTAWriteToFileCb(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
+static void PerformOTACheck() {
+	CURL *curl = curl_easy_init();
+	if (!curl) return;
+
+	curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/SonizBeibe/TypeMotion-Dist/releases/latest");
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "TypeMotion AutoUpdater");
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+	std::string result;
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OTAWriteToStringCb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
+
+	CURLcode res_code = curl_easy_perform(curl);
+
+	long http_code = 0;
+	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+	if (res_code == CURLE_OK && http_code == 200) {
+		try {
+			std::stringstream ss(result);
+			json::UnknownElement root;
+			json::Reader::Read(root, ss);
+
+			if (root.GetType() != json::UnknownElement::Object) return;
+			json::Object& root_obj = static_cast<json::Object&>(root);
+
+			auto tag_it = root_obj.find("tag_name");
+			if (tag_it != root_obj.end() && tag_it->second.GetType() == json::UnknownElement::String) {
+				std::string tag_name = static_cast<json::String const&>(tag_it->second);
+
+				// Compare with actual dynamic version
+				if (VersionIsNewer(tag_name, GetAegisubShortVersionString())) {
+					auto assets_it = root_obj.find("assets");
+					if (assets_it != root_obj.end() && assets_it->second.GetType() == json::UnknownElement::Array) {
+						json::Array& assets = static_cast<json::Array&>(assets_it->second);
+						if (!assets.empty()) {
+							json::Object& asset_obj = static_cast<json::Object&>(assets.front());
+							auto url_it = asset_obj.find("browser_download_url");
+							if (url_it != asset_obj.end() && url_it->second.GetType() == json::UnknownElement::String) {
+								std::string download_url = static_cast<json::String const&>(url_it->second);
+
+								// Download to temp dir
+								wxString temp_dir = wxStandardPaths::Get().GetTempDir();
+								wxString exe_path = temp_dir + "\\typemotion_update.exe";
+
+								#ifdef _WIN32
+								FILE *fp = _wfopen(exe_path.wc_str(), L"wb");
+#else
+								FILE *fp = fopen(exe_path.utf8_str(), "wb");
+#endif
+								if (fp) {
+									curl_easy_setopt(curl, CURLOPT_URL, download_url.c_str());
+									curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OTAWriteToFileCb);
+									curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+
+									CURLcode dl_res = curl_easy_perform(curl);
+
+									long dl_http_code = 0;
+									curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &dl_http_code);
+									fclose(fp);
+
+									if (dl_res == CURLE_OK && dl_http_code == 200) {
+										wxString bat_path = temp_dir + "\\update_typemotion.bat";
+										wxString current_exe = wxStandardPaths::Get().GetExecutablePath();
+
+										#ifdef _WIN32
+										FILE *bat_fp = _wfopen(bat_path.wc_str(), L"w");
+#else
+										FILE *bat_fp = fopen(bat_path.utf8_str(), "w");
+#endif
+										if (bat_fp) {
+											fprintf(bat_fp, "@echo off\n");
+											fprintf(bat_fp, "chcp 65001 > NUL\n");
+											fprintf(bat_fp, "timeout /t 2 /nobreak > NUL\n");
+											fprintf(bat_fp, "move /y \"%s\" \"%s\"\n", (const char*)exe_path.utf8_str(), (const char*)current_exe.utf8_str());
+											fprintf(bat_fp, "start \"\" \"%s\"\n", (const char*)current_exe.utf8_str());
+											fprintf(bat_fp, "del \"%%~f0\"\n");
+											fclose(bat_fp);
+
+											wxExecute(bat_path);
+											wxGetApp().CloseAll();
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (...) {
+			// Ignore parse errors or other issues
+		}
+	}
+	curl_easy_cleanup(curl);
+}
+
 void PerformVersionCheck(bool interactive) {
 	agi::dispatch::Background().Async([=]{
+		PerformOTACheck();
+
 		if (!interactive) {
 			// Automatic checking enabled?
 			if (!OPT_GET("App/Auto/Check For Updates")->GetBool())

@@ -196,6 +196,8 @@ void AsyncVideoProvider::UpdateSubtitles(const AssDialogue *changed) throw() {
 		delete &*it--;
 
 		single_frame = NEW_SUBS_FILE;
+		// If there are newer requests pending (e.g. fast typing), drop this frame render!
+		if (req_version < version) return;
 		ProcAsync(req_version, true);
 	});
 }
