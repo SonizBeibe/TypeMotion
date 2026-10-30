@@ -54,7 +54,13 @@ jobs:
           -Dfribidi:tests=false -Dfribidi:docs=false
 
       - name: Build
-        run: ninja -C build-ios typemotion_core typemotion-headless
+        run: |
+          set -o pipefail
+          meson compile -C build-ios typemotion_core typemotion-headless --ninja-args=-k0 2>&1 | tee build.log
+
+      - name: Show the compile errors
+        if: failure()
+        run: grep -E "error:|Error |undefined symbol|ld: " build.log | sort -u | head -80 || true
 
       - name: Check the result is for iPhone
         run: |
