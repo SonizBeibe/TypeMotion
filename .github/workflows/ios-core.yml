@@ -22,6 +22,11 @@ jobs:
       - name: Install meson and ninja
         run: pip3 install --break-system-packages meson ninja
 
+      # checkasm.wrap redirects to dav1d's own wrap, which only exists once
+      # dav1d is downloaded, and meson reads every wrap when it starts
+      - name: Download dav1d
+        run: git clone --depth 1 https://github.com/videolan/dav1d.git subprojects/dav1d
+
       - name: Write the cross file
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
