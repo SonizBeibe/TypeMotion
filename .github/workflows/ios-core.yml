@@ -33,12 +33,15 @@ jobs:
           echo "iPhoneOS SDK: $SDK"
           sed "s|@SDK@|$SDK|" ios/cross/ios-arm64.ini > ios-arm64.ini
 
+      # LuaJIT's buildvm runs on the Mac and writes the library tables for
+      # the phone, so it has to know the phone's LuaJIT has no JIT (Apple
+      # doesn't let apps generate machine code): LUAJIT_DISABLE_JIT for both
       - name: Configure
         run: >-
           meson setup build-ios
           --cross-file ios-arm64.ini
           -Dcore_only=true -Dtests=false
-          -Dffms2=enabled --force-fallback-for=ffms2,ffmpeg,dav1d,libass,zlib,freetype2,fribidi,harfbuzz,libpng,uchardet,icu,luajit
+          -Dffms2=enabled --force-fallback-for=ffms2,ffmpeg,dav1d,libass,zlib,freetype2,fribidi,harfbuzz,uchardet,icu,luajit
           -Dlocal_boost=true -Ddefault_library=static
           -Dbuildtype=release -Db_pch=false
           -Dlibass:require-system-font-provider=false
@@ -52,6 +55,9 @@ jobs:
           -Ddav1d:enable_tools=false -Ddav1d:enable_tests=false -Ddav1d:enable_examples=false -Ddav1d:enable_docs=false
           -Dharfbuzz:tests=disabled -Dharfbuzz:docs=disabled
           -Dfribidi:tests=false -Dfribidi:docs=false
+          -Dfreetype2:png=disabled
+          -Dbuild.c_args=-DLUAJIT_DISABLE_JIT
+          -Dc_args=-DLUAJIT_DISABLE_JIT
 
       - name: Build
         run: |

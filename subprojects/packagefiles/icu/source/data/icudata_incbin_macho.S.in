@@ -1,0 +1,7 @@
+/* The ICU data file in an object file, as pkgdata -m static would make it
+   (Mach-O version, for iOS and macOS) */
+    .section __TEXT,__const
+    .globl _icudt67_dat
+    .p2align 4
+_icudt67_dat:
+    .incbin "@ICUDATA_FILE@"

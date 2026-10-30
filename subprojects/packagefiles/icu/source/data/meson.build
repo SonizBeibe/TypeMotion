@@ -4,7 +4,7 @@ if meson.is_cross_build()
     # icupkg and pkgdata are built for the host machine and can't run here, so
     # the cross assembler puts the data file in an object file instead, under
     # the symbol pkgdata gives it
-    icudata_s = configure_file(input: 'icudata_incbin.S.in',
+    icudata_s = configure_file(input: host_machine.system() == 'darwin' ? 'icudata_incbin_macho.S.in' : 'icudata_incbin.S.in',
                                output: 'icudata_incbin.S',
                                configuration: {
                                    'ICUDATA_FILE': (meson.current_source_dir() / 'in' / 'icudt67l.dat').replace('\\', '/'),
