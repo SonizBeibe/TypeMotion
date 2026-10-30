@@ -57,9 +57,12 @@ libaegisub_src = [
 if host_machine.system() == 'darwin'
     libaegisub_src += [
         'osx/dispatch.mm',
-        'osx/spellchecker.mm',
         'osx/util.mm',
     ]
+    # NSSpellChecker is AppKit, which iOS doesn't have
+    if cc.get_define('TARGET_OS_IPHONE', prefix: '#include <TargetConditionals.h>') != '1'
+        libaegisub_src += 'osx/spellchecker.mm'
+    endif
 else
     libaegisub_src += 'common/dispatch.cpp'
 endif

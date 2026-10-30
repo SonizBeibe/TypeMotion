@@ -18,8 +18,11 @@
 
 #include "libaegisub/util_osx.h"
 
-#import <ApplicationServices/ApplicationServices.h>
 #import <Foundation/Foundation.h>
+#include <TargetConditionals.h>
+#if !TARGET_OS_IPHONE
+#import <ApplicationServices/ApplicationServices.h>
+#endif
 
 static std::string EmptyIfNil(NSString *string) {
 	return [string UTF8String] ?: "";

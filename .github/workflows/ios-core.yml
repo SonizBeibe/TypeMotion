@@ -1,0 +1,73 @@
+name: iOS core
+
+# Builds the TypeMotion subtitle core (core_only: libaegisub, LuaJIT without
+# JIT, libass, FFmpeg, ffms2...) for iPhone arm64, as a first step towards the
+# iOS app. Nothing here touches the Android build.
+
+on:
+  push:
+    branches: [ 'claude/**', 'ios*' ]
+    paths-ignore: [ 'android/**' ]
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: iPhone arm64 core
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install meson and ninja
+        run: pip3 install --break-system-packages meson ninja
+
+      - name: Write the cross file
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "iPhoneOS SDK: $SDK"
+          sed "s|@SDK@|$SDK|" ios/cross/ios-arm64.ini > ios-arm64.ini
+
+      - name: Configure
+        run: >-
+          meson setup build-ios
+          --cross-file ios-arm64.ini
+          -Dcore_only=true -Dtests=false
+          -Dffms2=enabled --force-fallback-for=ffms2,ffmpeg,dav1d,libass,zlib,freetype2,fribidi,harfbuzz,libpng,uchardet,icu,luajit
+          -Dlocal_boost=true -Ddefault_library=static
+          -Dbuildtype=release -Db_pch=false
+          -Dlibass:require-system-font-provider=false
+          -Dlibass:checkasm=disabled -Dlibass:asm=disabled
+          -Dffmpeg:programs=disabled -Dffmpeg:ffmpeg=disabled -Dffmpeg:ffplay=disabled -Dffmpeg:ffprobe=disabled
+          -Dffmpeg:tests=disabled -Dffmpeg:avdevice=disabled -Dffmpeg:avfilter=disabled -Dffmpeg:postproc=disabled
+          -Dffmpeg:encoders=disabled -Dffmpeg:muxers=disabled -Dffmpeg:filters=disabled -Dffmpeg:hwaccels=disabled
+          -Dffmpeg:devices=disabled -Dffmpeg:indevs=disabled -Dffmpeg:outdevs=disabled
+          -Dffmpeg:network=disabled -Dffmpeg:protocols=disabled -Dffmpeg:file_protocol=enabled
+          -Dffmpeg:bzlib=disabled -Dffmpeg:lzma=disabled -Dffmpeg:libdav1d=enabled -Dffmpeg:zlib=enabled
+          -Ddav1d:enable_tools=false -Ddav1d:enable_tests=false -Ddav1d:enable_examples=false -Ddav1d:enable_docs=false
+          -Dharfbuzz:tests=disabled -Dharfbuzz:docs=disabled
+          -Dfribidi:tests=false -Dfribidi:docs=false
+
+      - name: Build
+        run: ninja -C build-ios typemotion_core typemotion-headless
+
+      - name: Check the result is for iPhone
+        run: |
+          file build-ios/typemotion-headless
+          otool -l build-ios/typemotion-headless | grep -A4 LC_BUILD_VERSION
+          ls -lh build-ios/libtypemotion_core.a
+
+      - name: Upload the core
+        uses: actions/upload-artifact@v4
+        with:
+          name: typemotion-core-ios-arm64
+          path: |
+            build-ios/libtypemotion_core.a
+            build-ios/typemotion-headless
+
+      - name: Upload the meson log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meson-log
+          path: build-ios/meson-logs/

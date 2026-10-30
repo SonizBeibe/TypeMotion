@@ -324,6 +324,12 @@ if core_only and host_machine.system() == 'android'
     dep_avail += 'AAudio'
 endif
 
+if core_only and host_machine.system() == 'darwin'
+    # libaegisub/osx uses Foundation (NSBundle, NSProcessInfo) and the fonts
+    # are listed with CoreText, which iOS has too
+    deps += dependency('appleframeworks', modules: ['Foundation', 'CoreFoundation', 'CoreText'])
+endif
+
 if host_machine.system() == 'windows' and cc.has_header('dwrite_3.h')
     conf.set('HAVE_DWRITE_3', 1)
 endif
