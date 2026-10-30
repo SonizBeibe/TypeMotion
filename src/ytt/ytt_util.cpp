@@ -15,9 +15,12 @@
 #include <cstring>
 #include <limits>
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__APPLE__)
 #include <cerrno>
 #include <locale.h>
+#endif
+#ifdef __APPLE__
+#include <xlocale.h>
 #endif
 
 namespace ytt {
@@ -705,8 +708,9 @@ static bool TryParseFloatImpl(u16v s, bool any, float& value) {
 	// from_chars rather than strtod, as the latter depends on the C locale's
 	// decimal separator
 	double d = 0;
-#ifdef __ANDROID__
-	// The NDK's libc++ has no from_chars for floating point, so strtod_l with
+#if defined(__ANDROID__) || defined(__APPLE__)
+	// The NDK's libc++ has no from_chars for floating point, and Apple's
+	// only has it from iOS 26 and macOS 26, so strtod_l with
 	// the C locale (digits only has digits, a dot and an exponent here)
 	static locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
 	char *end_ptr = nullptr;
