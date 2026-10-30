@@ -60,7 +60,8 @@ jobs:
 
       - name: Show the compile errors
         if: failure()
-        run: grep -E "error:|Error |undefined symbol|ld: " build.log | sort -u | head -80 || true
+        run: |
+          grep -E "error:|Error |undefined symbol|ld: " build.log | sort -u | head -80 || true
 
       - name: Check the result is for iPhone
         run: |
