@@ -21,8 +21,13 @@ struct LibresrcBlob {
 	int scale;
 };
 
-#include "bitmap.h"
 #include "default_config.h"
+
+#define GET_DEFAULT_CONFIG(a) std::string_view(reinterpret_cast<const char *>(a), sizeof(a))
+
+// The icons are only built for the desktop interface
+#ifndef TYPEMOTION_NO_WX
+#include "bitmap.h"
 
 #include <wx/version.h>
 
@@ -35,8 +40,6 @@ wxBitmap libresrc_getimage(const unsigned char *image, size_t size, int dir=0);
 wxIcon libresrc_geticon(const unsigned char *image, size_t size);
 #define GETIMAGE(a) libresrc_getimage(a, sizeof(a))
 
-#define GET_DEFAULT_CONFIG(a) std::string_view(reinterpret_cast<const char *>(a), sizeof(a))
-
 // height is the desired displayed height of the bitmap bundle in DIP.
 // Having to specify this when constructing the bitmap is slightly awkward,
 // but wxWidgets doesn't allow you to scale a wxBitmapBundle after creating it,
@@ -48,3 +51,4 @@ wxIconBundle libresrc_geticonbundle(const LibresrcBlob *images, size_t count);
 #define GETBUNDLE(a, h) libresrc_getbitmapbundle(a, sizeof(a) / sizeof(*a), h)
 #define GETBUNDLEDIR(a, h, d) libresrc_getbitmapbundle(a, sizeof(a) / sizeof(*a), h, d)
 #define GETICONS(a) libresrc_geticonbundle(a, sizeof(a) / sizeof(*a))
+#endif

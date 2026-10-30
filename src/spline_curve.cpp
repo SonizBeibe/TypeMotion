@@ -33,7 +33,7 @@
 ///
 
 #include "spline_curve.h"
-#include "utils.h"
+#include "utils_core.h"
 
 #include <algorithm>
 #include <limits>

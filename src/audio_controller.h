@@ -31,14 +31,18 @@
 #include <libaegisub/signal.h>
 
 #include <cstdint>
+#include <memory>
+
+#ifndef TYPEMOTION_NO_WX
 #include <wx/event.h>
 #include <wx/power.h>
-#include <wx/timer.h>
+#endif
 
 class AudioPlayer;
 class AudioTimingController;
 class TimeRange;
 namespace agi { class AudioProvider; }
+namespace ui { class Timer; }
 namespace agi { struct Context; }
 
 /// @class AudioController
@@ -46,7 +50,14 @@ namespace agi { struct Context; }
 ///
 /// AudioController owns an AudioPlayer and uses it to play audio from the
 /// project's current audio provider.
-class AudioController final : public wxEvtHandler, private agi::signal::ConnectionScope {
+#ifdef TYPEMOTION_NO_WX
+/// Without wxWidgets there are no power events to handle
+struct AudioControllerEventHandler { };
+#else
+using AudioControllerEventHandler = wxEvtHandler;
+#endif
+
+class AudioController final : public AudioControllerEventHandler, private agi::signal::ConnectionScope {
 	/// Project context this controller belongs to
 	agi::Context *context;
 
@@ -83,7 +94,7 @@ class AudioController final : public wxEvtHandler, private agi::signal::Connecti
 	PlaybackMode playback_mode = PM_NotPlaying;
 
 	/// Timer used for playback position updates
-	wxTimer playback_timer;
+	std::unique_ptr<ui::Timer> playback_timer;
 
 	/// The audio provider
 	agi::AudioProvider *provider = nullptr;
@@ -92,7 +103,7 @@ class AudioController final : public wxEvtHandler, private agi::signal::Connecti
 	void OnAudioProvider(agi::AudioProvider *new_provider);
 
 	/// Event handler for the playback timer
-	void OnPlaybackTimer(wxTimerEvent &event);
+	void OnPlaybackTimer();
 
 	/// @brief Timing controller signals primary playback range changed
 	void OnTimingControllerUpdatedPrimaryRange();

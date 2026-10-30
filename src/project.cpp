@@ -19,23 +19,18 @@
 #include "ass_dialogue.h"
 #include "ass_file.h"
 #include "async_video_provider.h"
-#include "audio_controller.h"
 #include "audio_provider_factory.h"
-#include "base_grid.h"
 #include "charset_detect.h"
-#include "compat.h"
-#include "dialog_progress.h"
-#include "dialogs.h"
-#include "format.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "include/aegisub/video_provider.h"
 #include "mkv_wrap.h"
 #include "options.h"
 #include "selection_controller.h"
 #include "subs_controller.h"
-#include "utils.h"
+#include "ui_hooks.h"
+#include "utils_core.h"
 #include "video_controller.h"
-#include "video_display.h"
 
 #include <libaegisub/audio/provider.h>
 #include <libaegisub/format_path.h>
@@ -45,7 +40,6 @@
 #include <libaegisub/path.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
-#include <wx/msgdlg.h>
 
 Project::Project(agi::Context *c) : context(c) {
 	BindConnection(OPT_SUB("Audio/Cache/Type", &Project::ReloadAudio, this));
@@ -81,12 +75,8 @@ void Project::ReloadVideo() {
 	}
 }
 
-void Project::ShowError(wxString const& message) {
-	wxMessageBox(message, _("Error loading file"), wxOK | wxICON_ERROR | wxCENTER, context->parent);
-}
-
-void Project::ShowError(std::string const& message) {
-	ShowError(to_wx(message));
+void Project::ShowError(UiString const& message) {
+	ui::ShowMessage(message, _("Error loading file"), ui::OK | ui::ICON_ERROR | ui::CENTRE, context->parent);
 }
 
 void Project::SetPath(agi::fs::path& var, const char *token, const char *mru, agi::fs::path const& value) {
@@ -131,11 +121,11 @@ bool Project::DoLoadSubtitles(agi::fs::path const& path, std::string encoding, P
 		return false;
 	}
 	catch (agi::Exception const& e) {
-		ShowError(e.GetMessage());
+		ShowError(to_ui(e.GetMessage()));
 		return false;
 	}
 	catch (std::exception const& e) {
-		ShowError(std::string(e.what()));
+		ShowError(to_ui(e.what()));
 		return false;
 	}
 	catch (...) {
@@ -151,7 +141,7 @@ bool Project::DoLoadSubtitles(agi::fs::path const& path, std::string encoding, P
 		sel.insert(active_line);
 	}
 	context->selectionController->SetSelectionAndActive(std::move(sel), active_line);
-	context->subsGrid->ScrollTo(properties.scroll_position);
+	ui::ScrollGridTo(context, properties.scroll_position);
 
 	return true;
 }
@@ -196,14 +186,14 @@ void Project::LoadUnloadFiles(ProjectProperties properties) {
 		return;
 
 	if (load_linked == 2) {
-		wxString str = _("Do you want to load/unload the associated files?");
+		UiString str = _("Do you want to load/unload the associated files?");
 		str += "\n";
 
-		auto append_file = [&](agi::fs::path const& p, wxString const& unload, wxString const& load) {
+		auto append_file = [&](agi::fs::path const& p, UiString const& unload, UiString const& load) {
 			if (p.empty())
 				str += "\n" + unload;
 			else
-				str += "\n" + agi::wxformat(load, p);
+				str += "\n" + ui_format(load, p);
 		};
 
 		if (audio != audio_file)
@@ -215,7 +205,7 @@ void Project::LoadUnloadFiles(ProjectProperties properties) {
 		if (keyframes != keyframes_file)
 			append_file(keyframes, _("Unload keyframes"), _("Load keyframes file: %s"));
 
-		if (wxMessageBox(str, _("(Un)Load files?"), wxYES_NO | wxCENTRE, context->parent) != wxYES)
+		if (ui::ShowMessage(str, _("(Un)Load files?"), ui::YES_NO | ui::CENTRE, context->parent) != ui::YES)
 			return;
 	}
 
@@ -232,7 +222,7 @@ void Project::LoadUnloadFiles(ProjectProperties properties) {
 				vc->SetAspectRatio(properties.ar_value);
 			else
 				vc->SetAspectRatio(ar_mode);
-			context->videoDisplay->SetWindowZoom(properties.video_zoom);
+			ui::SetVideoZoom(context, properties.video_zoom);
 		}
 	}
 
@@ -251,7 +241,7 @@ void Project::LoadUnloadFiles(ProjectProperties properties) {
 
 void Project::DoLoadAudio(agi::fs::path const& path, bool quiet) {
 	if (!progress)
-		progress = new DialogProgress(context->parent);
+		progress = ui::CreateWindowProgress(context->parent);
 
 	try {
 		try {
@@ -264,7 +254,7 @@ void Project::DoLoadAudio(agi::fs::path const& path, bool quiet) {
 		}
 	}
 	catch (agi::fs::FileNotFound const& e) {
-		return ShowError(_("The audio file was not found: ") + to_wx(e.GetMessage()));
+		return ShowError(_("The audio file was not found: ") + to_ui(e.GetMessage()));
 	}
 	catch (agi::AudioDataNotFound const& e) {
 		if (quiet) {
@@ -272,13 +262,13 @@ void Project::DoLoadAudio(agi::fs::path const& path, bool quiet) {
 			return;
 		}
 		else
-			return ShowError(_("None of the available audio providers recognised the selected file as containing audio data.\n\nThe following providers were tried:\n") + to_wx(e.GetMessage()));
+			return ShowError(_("None of the available audio providers recognised the selected file as containing audio data.\n\nThe following providers were tried:\n") + to_ui(e.GetMessage()));
 	}
 	catch (agi::AudioProviderError const& e) {
-		return ShowError(_("None of the available audio providers have a codec available to handle the selected file.\n\nThe following providers were tried:\n") + to_wx(e.GetMessage()));
+		return ShowError(_("None of the available audio providers have a codec available to handle the selected file.\n\nThe following providers were tried:\n") + to_ui(e.GetMessage()));
 	}
 	catch (agi::Exception const& e) {
-		return ShowError(e.GetMessage());
+		return ShowError(to_ui(e.GetMessage()));
 	}
 
 	SetPath(audio_file, "?audio", "Audio", path);
@@ -302,25 +292,25 @@ void Project::CloseAudio() {
 
 bool Project::DoLoadVideo(agi::fs::path const& path) {
 	if (!progress)
-		progress = new DialogProgress(context->parent);
+		progress = ui::CreateWindowProgress(context->parent);
 
 	try {
-		video_provider = std::make_unique<AsyncVideoProvider>(path, context->ass->GetYCbCrMatrix(), context->videoController.get(), progress);
+		video_provider = std::make_unique<AsyncVideoProvider>(path, context->ass->GetYCbCrMatrix(), ui::CreateVideoListener(context), progress);
 	}
 	catch (agi::UserCancelException const&) { return false; }
 	catch (agi::fs::FileSystemError const& err) {
 		config::mru->Remove("Video", path);
-		ShowError(to_wx(err.GetMessage()));
+		ShowError(to_ui(err.GetMessage()));
 		return false;
 	}
 	catch (VideoProviderError const& err) {
-		ShowError(to_wx(err.GetMessage()));
+		ShowError(to_ui(err.GetMessage()));
 		return false;
 	}
 
 	AnnounceVideoProviderModified(video_provider.get());
 
-	UpdateVideoProperties(context->ass.get(), video_provider.get(), context->parent);
+	ui::UpdateVideoProperties(context->ass.get(), video_provider.get(), context->parent);
 	video_provider->LoadSubtitles(context->ass.get());
 
 	timecodes = video_provider->GetFPS();
@@ -332,7 +322,7 @@ bool Project::DoLoadVideo(agi::fs::path const& path) {
 
 	std::string warning = video_provider->GetWarning();
 	if (!warning.empty())
-		wxMessageBox(to_wx(warning), _("Warning"), wxICON_WARNING | wxOK);
+		ui::ShowMessage(to_ui(warning), _("Warning"), ui::ICON_WARNING | ui::OK);
 
 	video_has_subtitles = false;
 	if (agi::fs::HasExtension(path, "mkv"))
@@ -384,11 +374,11 @@ void Project::LoadTimecodes(agi::fs::path path) {
 		DoLoadTimecodes(path);
 	}
 	catch (agi::fs::FileSystemError const& e) {
-		ShowError(e.GetMessage());
+		ShowError(to_ui(e.GetMessage()));
 		config::mru->Remove("Timecodes", path);
 	}
 	catch (agi::vfr::Error const& e) {
-		ShowError(_("Failed to parse timecodes file: ") + to_wx(e.GetMessage()));
+		ShowError(_("Failed to parse timecodes file: ") + to_ui(e.GetMessage()));
 		config::mru->Remove("Timecodes", path);
 	}
 }
@@ -410,15 +400,15 @@ void Project::LoadKeyframes(agi::fs::path path) {
 		DoLoadKeyframes(path);
 	}
 	catch (agi::fs::FileSystemError const& e) {
-		ShowError(e.GetMessage());
+		ShowError(to_ui(e.GetMessage()));
 		config::mru->Remove("Keyframes", path);
 	}
 	catch (agi::keyframe::KeyframeFormatParseError const& e) {
-		ShowError(_("Failed to parse keyframes file: ") + to_wx(e.GetMessage()));
+		ShowError(_("Failed to parse keyframes file: ") + to_ui(e.GetMessage()));
 		config::mru->Remove("Keyframes", path);
 	}
 	catch (agi::keyframe::UnknownKeyframeFormatError const& e) {
-		ShowError(_("Keyframes file in unknown format: ") + to_wx(e.GetMessage()));
+		ShowError(_("Keyframes file in unknown format: ") + to_ui(e.GetMessage()));
 		config::mru->Remove("Keyframes", path);
 	}
 }

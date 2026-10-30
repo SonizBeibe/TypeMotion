@@ -35,10 +35,10 @@
 #ifdef WITH_FFMS2
 #include "ffmpegsource_common.h"
 
-#include "compat.h"
-#include "format.h"
+#include "i18n.h"
 #include "options.h"
-#include "utils.h"
+#include "ui_hooks.h"
+#include "utils_core.h"
 
 #include <libaegisub/background_runner.h>
 #include <libaegisub/fs.h>
@@ -47,8 +47,6 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/crc.hpp>
-#include <wx/intl.h>
-#include <wx/choicdlg.h>
 
 FFmpegSourceProvider::FFmpegSourceProvider(agi::BackgroundRunner *br)
 : br(br)
@@ -74,8 +72,8 @@ FFMS_Index *FFmpegSourceProvider::DoIndexing(FFMS_Indexer *Indexer,
 	// index all audio tracks
 	FFMS_Index *Index;
 	br->Run([&](agi::ProgressSink *ps) {
-		ps->SetTitle(from_wx(_("Indexing")));
-		ps->SetMessage(from_wx(_("Reading timecodes and frame/sample data")));
+		ps->SetTitle(from_ui(_("Indexing")));
+		ps->SetMessage(from_ui(_("Reading timecodes and frame/sample data")));
 		TIndexCallback callback = [](int64_t Current, int64_t Total, void *Private) -> int {
 			auto ps = static_cast<agi::ProgressSink *>(Private);
 			ps->SetProgress(Current, Total);
@@ -120,14 +118,14 @@ FFmpegSourceProvider::TrackSelection
 FFmpegSourceProvider::AskForTrackSelection(const std::map<int, std::string> &TrackList,
                                            FFMS_TrackType Type) {
 	std::vector<int> TrackNumbers;
-	wxArrayString Choices;
+	std::vector<UiString> Choices;
 
 	for (auto const& track : TrackList) {
-		Choices.Add(agi::wxformat(_("Track %02d: %s"), track.first, track.second));
+		Choices.push_back(ui_format(_("Track %02d: %s"), track.first, track.second));
 		TrackNumbers.push_back(track.first);
 	}
 
-	int Choice = wxGetSingleChoiceIndex(
+	int Choice = ui::GetSingleChoiceIndex(
 		Type == FFMS_TYPE_VIDEO ? _("Multiple video tracks detected, please choose the one you wish to load:") : _("Multiple audio tracks detected, please choose the one you wish to load:"),
 		Type == FFMS_TYPE_VIDEO ? _("Choose video track") : _("Choose audio track"),
 		Choices);

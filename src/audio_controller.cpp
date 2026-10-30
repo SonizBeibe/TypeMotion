@@ -34,6 +34,7 @@
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "project.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/audio/provider.h>
 
@@ -41,11 +42,9 @@
 
 AudioController::AudioController(agi::Context *context)
 : context(context)
-, playback_timer(this)
+, playback_timer(ui::CreateTimer([this] { OnPlaybackTimer(); }))
 , provider_connection(context->project->AddAudioProviderListener(&AudioController::OnAudioProvider, this))
 {
-	Bind(wxEVT_TIMER, &AudioController::OnPlaybackTimer, this, playback_timer.GetId());
-
 #ifdef wxHAS_POWER_EVENTS
 	Bind(wxEVT_POWER_SUSPENDED, &AudioController::OnComputerSuspending, this);
 	Bind(wxEVT_POWER_RESUME, &AudioController::OnComputerResuming, this);
@@ -59,7 +58,7 @@ AudioController::~AudioController()
 	Stop();
 }
 
-void AudioController::OnPlaybackTimer(wxTimerEvent &)
+void AudioController::OnPlaybackTimer()
 {
 	if (!player) return;
 
@@ -140,7 +139,7 @@ void AudioController::PlayRange(const TimeRange &range)
 
 	player->Play(SamplesFromMilliseconds(range.begin()), SamplesFromMilliseconds(range.length()));
 	playback_mode = PM_Range;
-	playback_timer.Start(20);
+	playback_timer->Start(20);
 
 	AnnouncePlaybackPosition(range.begin());
 }
@@ -166,7 +165,7 @@ void AudioController::PlayToEnd(int start_ms)
 	int64_t start_sample = SamplesFromMilliseconds(start_ms);
 	player->Play(start_sample, provider->GetNumSamples()-start_sample);
 	playback_mode = PM_ToEnd;
-	playback_timer.Start(20);
+	playback_timer->Start(20);
 
 	AnnouncePlaybackPosition(start_ms);
 }
@@ -177,7 +176,7 @@ void AudioController::Stop()
 
 	player->Stop();
 	playback_mode = PM_NotPlaying;
-	playback_timer.Stop();
+	playback_timer->Stop();
 
 	AnnouncePlaybackStop();
 }

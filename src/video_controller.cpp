@@ -32,23 +32,28 @@
 #include "ass_dialogue.h"
 #include "ass_file.h"
 #include "audio_controller.h"
-#include "compat.h"
-#include "format.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "project.h"
 #include "selection_controller.h"
 #include "time_range.h"
 #include "async_video_provider.h"
-#include "utils.h"
+#include "ui_hooks.h"
+#include "utils_core.h"
 #include "video_frame.h"
 
 #include <libaegisub/ass/time.h>
 
+#ifndef TYPEMOTION_NO_WX
+#include "video_events.h"
+
 #include <wx/log.h>
+#endif
 
 VideoController::VideoController(agi::Context *c)
 : context(c)
+, playback(ui::CreateTimer([this] { OnPlayTimer(); }))
 , playAudioOnStep(OPT_GET("Audio/Plays When Stepping Video"))
 , connections(agi::signal::make_vector({
 	context->ass->AddCommitListener(&VideoController::OnSubtitlesCommit, this),
@@ -56,10 +61,13 @@ VideoController::VideoController(agi::Context *c)
 	context->selectionController->AddActiveLineListener(&VideoController::OnActiveLineChanged, this),
 }))
 {
+#ifndef TYPEMOTION_NO_WX
 	Bind(EVT_VIDEO_ERROR, &VideoController::OnVideoError, this);
 	Bind(EVT_SUBTITLES_ERROR, &VideoController::OnSubtitlesError, this);
-	playback.Bind(wxEVT_TIMER, &VideoController::OnPlayTimer, this);
+#endif
 }
+
+VideoController::~VideoController() = default;
 
 void VideoController::OnNewVideoProvider(AsyncVideoProvider *new_provider) {
 	Stop();
@@ -77,6 +85,12 @@ void VideoController::OnSubtitlesCommit(int type, const AssDialogue *changed) {
 			provider->SetColorSpace(new_matrix);
 		}
 	}
+
+	// Skip video subtitle re-rendering during audio timing drag
+	// (single line time-only changes) to avoid expensive re-renders
+	// on every pixel of mouse movement
+	if (changed && !(type & ~AssFile::COMMIT_DIAG_TIME))
+		return;
 
 	if (!changed)
 		provider->LoadSubtitles(context->ass.get());
@@ -147,7 +161,8 @@ void VideoController::Play() {
 	context->audioController->PlayToEnd(start_ms);
 
 	playback_start_time = std::chrono::steady_clock::now();
-	playback.Start(10);
+	playback->Start(10);
+	playing = true;
 }
 
 void VideoController::PlayLine() {
@@ -166,17 +181,19 @@ void VideoController::PlayLine() {
 	JumpToFrame(startFrame);
 
 	playback_start_time = std::chrono::steady_clock::now();
-	playback.Start(10);
+	playback->Start(10);
+	playing = true;
 }
 
 void VideoController::Stop() {
 	if (IsPlaying()) {
-		playback.Stop();
+		playback->Stop();
+		playing = false;
 		context->audioController->Stop();
 	}
 }
 
-void VideoController::OnPlayTimer(wxTimerEvent &) {
+void VideoController::OnPlayTimer() {
 	using namespace std::chrono;
 	int next_frame = FrameAtTime(start_ms + duration_cast<milliseconds>(steady_clock::now() - playback_start_time).count());
 	if (next_frame == frame_n) return;
@@ -229,6 +246,7 @@ std::shared_ptr<VideoFrame> VideoController::GetFrame(int frame, bool raw) const
 	return provider->GetFrame(frame, timestamp, raw);
 }
 
+#ifndef TYPEMOTION_NO_WX
 void VideoController::OnVideoError(VideoProviderErrorEvent const& err) {
 	wxLogError(
 		fmt_tl("Failed seeking video. The video file may be corrupt or incomplete.\nError message reported: %s",
@@ -240,3 +258,4 @@ void VideoController::OnSubtitlesError(SubtitlesProviderErrorEvent const& err) {
 		fmt_tl("Failed rendering subtitles.\nError message reported: %s",
 		err.GetMessage()));
 }
+#endif

@@ -1,37 +1,49 @@
-icudata_lst = custom_target('icudata.lst',
-                            # not sure how to ensure that @PRIVATE_DIR@ exists
-                            #command: [icupkg, '-d', '@PRIVATE_DIR@', '--list', '-x', '*', '@INPUT@',  '-o', '@OUTPUT@'],
-                            command: [icupkg, '-d', '@OUTDIR@', '--list', '-x', '*', '@INPUT@',  '-o', '@OUTPUT@'],
-                            input: files('in/icudt67l.dat'),
-                            output: 'icudata.lst')
-
 is_static = get_option('default_library') == 'static'
 
-if host_machine.system() == 'windows' # only msvc supported
-    data_lib_static = custom_target(
-        'icudata_static', command: [pkgdata, '-q', '-c', '-e', 'icudt67', '-L', 'icudata_static',
-                                    '-d', '@OUTDIR@', '-s', '@OUTDIR@', '-p', 'icudt67l',
-                                    '-m', 'static', '@INPUT@'],
-        input: icudata_lst, output: 'icudata_static.lib')
+if meson.is_cross_build()
+    # icupkg and pkgdata are built for the host machine and can't run here, so
+    # the cross assembler puts the data file in an object file instead, under
+    # the symbol pkgdata gives it
+    icudata_s = configure_file(input: 'icudata_incbin.S.in',
+                               output: 'icudata_incbin.S',
+                               configuration: {
+                                   'ICUDATA_FILE': (meson.current_source_dir() / 'in' / 'icudt67l.dat').replace('\\', '/'),
+                               })
+    data_lib_static = static_library('icudata_static', icudata_s)
 else
-    if host_machine.system() == 'darwin'
-        suffix = is_static ? '.a' : '.dylib'
-    else
-        suffix = is_static ? '.a' : '.so'
-    endif
-    suffix = '.a'
+    icudata_lst = custom_target('icudata.lst',
+                                # not sure how to ensure that @PRIVATE_DIR@ exists
+                                #command: [icupkg, '-d', '@PRIVATE_DIR@', '--list', '-x', '*', '@INPUT@',  '-o', '@OUTPUT@'],
+                                command: [icupkg, '-d', '@OUTDIR@', '--list', '-x', '*', '@INPUT@',  '-o', '@OUTPUT@'],
+                                input: files('in/icudt67l.dat'),
+                                output: 'icudata.lst')
 
-    icupkg_inc = custom_target('icupkg.inc',
-                               command: [python3, '@INPUT@', host_machine.system(),
-                                         host_machine.cpu_family(), '@OUTPUT@'],
-                               input: 'generate_icupkg_inc.py',
-                               output: 'icupkg.inc')
-    data_lib_static = custom_target(
-        'icudata_static', command: [pkgdata, '-q', '-c', '-e', 'icudt67', '-L', 'icudata_static',
-                                    '-d', '@OUTDIR@', '-s', '@OUTDIR@',
-                                    '-p', 'icudt67l', '-O', icupkg_inc,
-                                    '-m', 'static', '@INPUT@'],
-        input: icudata_lst, output: 'libicudata_static' + suffix)
+    if host_machine.system() == 'windows' # only msvc supported
+        data_lib_static = custom_target(
+            'icudata_static', command: [pkgdata, '-q', '-c', '-e', 'icudt67', '-L', 'icudata_static',
+                                        '-d', '@OUTDIR@', '-s', '@OUTDIR@', '-p', 'icudt67l',
+                                        '-m', 'static', '@INPUT@'],
+            input: icudata_lst, output: 'icudata_static.lib')
+    else
+        if host_machine.system() == 'darwin'
+            suffix = is_static ? '.a' : '.dylib'
+        else
+            suffix = is_static ? '.a' : '.so'
+        endif
+        suffix = '.a'
+
+        icupkg_inc = custom_target('icupkg.inc',
+                                   command: [python3, '@INPUT@', host_machine.system(),
+                                             host_machine.cpu_family(), '@OUTPUT@'],
+                                   input: 'generate_icupkg_inc.py',
+                                   output: 'icupkg.inc')
+        data_lib_static = custom_target(
+            'icudata_static', command: [pkgdata, '-q', '-c', '-e', 'icudt67', '-L', 'icudata_static',
+                                        '-d', '@OUTDIR@', '-s', '@OUTDIR@',
+                                        '-p', 'icudt67l', '-O', icupkg_inc,
+                                        '-m', 'static', '@INPUT@'],
+            input: icudata_lst, output: 'libicudata_static' + suffix)
+    endif
 endif
 
 if is_static

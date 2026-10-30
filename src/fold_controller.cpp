@@ -18,7 +18,7 @@
 
 #include "ass_file.h"
 #include "include/aegisub/context.h"
-#include "format.h"
+#include "i18n.h"
 #include "subs_controller.h"
 
 #include <algorithm>

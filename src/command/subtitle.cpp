@@ -33,19 +33,17 @@
 
 #include "../ass_dialogue.h"
 #include "../ass_file.h"
-#include "../compat.h"
-#include "../dialog_search_replace.h"
 #include "../dialogs.h"
-#include "../frame_main.h"
+#include "../i18n.h"
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
-#include "../main.h"
 #include "../options.h"
 #include "../project.h"
 #include "../search_replace_engine.h"
 #include "../selection_controller.h"
 #include "../subs_controller.h"
 #include "../subtitle_format.h"
+#include "../ui_hooks.h"
 #include "../utils.h"
 #include "../video_controller.h"
 
@@ -53,8 +51,10 @@
 #include <libaegisub/charset_conv.h>
 
 #include <boost/range/algorithm/copy.hpp>
-#include <wx/msgdlg.h>
-#include <wx/choicdlg.h>
+
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
+#include "../main.h"
+#endif
 
 namespace {
 	using cmd::Command;
@@ -226,15 +226,15 @@ struct subtitle_insert_before_videotime final : public validate_nonempty_selecti
 };
 
 bool is_okay_to_close_subtitles([[maybe_unused]] agi::Context *c) {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
 	return true;
 #else
-	return c->subsController->TryToClose() != wxCANCEL;
+	return c->subsController->TryToClose() != ui::CANCEL;
 #endif
 }
 
 void load_subtitles([[maybe_unused]] agi::Context *c, agi::fs::path const& path, std::string const& encoding="") {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
 	wxGetApp().NewProjectContext().project->LoadSubtitles(path, encoding);
 #else
 	c->project->LoadSubtitles(path, encoding);
@@ -249,7 +249,7 @@ struct subtitle_new final : public Command {
 	STR_HELP("New subtitles")
 
 	void operator()([[maybe_unused]] agi::Context *c) override {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
 		wxGetApp().NewProjectContext();
 #else
 		if (is_okay_to_close_subtitles(c))
@@ -266,7 +266,7 @@ struct subtitle_close final : public Command {
 	STR_HELP("Close")
 
 	void operator()(agi::Context *c) override {
-		c->frame->Close();
+		ui::CloseWindow(c);
 	}
 };
 
@@ -313,10 +313,10 @@ struct subtitle_open_charset final : public Command {
 		auto filename = OpenFileSelector(_("Open Subtitles File"), "Path/Last/Subtitles", "","", SubtitleFormat::GetWildcards(0), c->parent);
 		if (filename.empty()) return;
 
-		wxString charset = wxGetSingleChoice(_("Choose charset code:"), _("Charset"), agi::charset::GetEncodingsList<wxArrayString>(), c->parent, -1, -1, true, 250, 200);
+		UiString charset = ui::GetSingleChoice(_("Choose charset code:"), _("Charset"), to_ui(agi::charset::GetEncodingsList<std::vector<std::string>>()), c->parent, 250, 200);
 		if (charset.empty()) return;
 
-		load_subtitles(c, filename, from_wx(charset));
+		load_subtitles(c, filename, from_ui(charset));
 	}
 };
 
@@ -328,7 +328,7 @@ struct subtitle_open_video final : public Command {
 	CMD_TYPE(COMMAND_VALIDATE)
 
 	void operator()(agi::Context *c) override {
-		if (c->subsController->TryToClose() == wxCANCEL) return;
+		if (c->subsController->TryToClose() == ui::CANCEL) return;
 		c->project->LoadSubtitles(c->project->VideoName(), "binary", false);
 	}
 
@@ -363,10 +363,10 @@ static void save_subtitles(agi::Context *c, agi::fs::path filename) {
 		c->subsController->Save(filename);
 	}
 	catch (const agi::Exception& err) {
-		wxMessageBox(to_wx(err.GetMessage()), _("Error"), wxOK | wxICON_ERROR | wxCENTER, c->parent);
+		ui::ShowMessage(to_ui(err.GetMessage()), _("Error"), ui::OK | ui::ICON_ERROR | ui::CENTRE, c->parent);
 	}
 	catch (...) {
-		wxMessageBox(_("Unknown error"), _("Error"), wxOK | wxICON_ERROR | wxCENTER, c->parent);
+		ui::ShowMessage(_("Unknown error"), _("Error"), ui::OK | ui::ICON_ERROR | ui::CENTRE, c->parent);
 	}
 }
 

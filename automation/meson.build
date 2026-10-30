@@ -21,6 +21,7 @@ install_data(
 install_data(
     'include/cleantags.lua',
     'include/clipboard.lua',
+    'include/json.lua',
     'include/karaskel-auto4.lua',
     'include/karaskel.lua',
     'include/lfs.lua',

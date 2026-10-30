@@ -23,7 +23,9 @@
 
 #include <cmath>
 #include <string>
+#ifndef TYPEMOTION_NO_WX
 #include <wx/gdicmn.h>
+#endif
 
 class Vector2D {
 	float x, y;
@@ -34,7 +36,9 @@ public:
 
 	Vector2D();
 	Vector2D(float x, float y) : x(x), y(y) { }
+#ifndef TYPEMOTION_NO_WX
 	Vector2D(wxPoint pt) : x(pt.x), y(pt.y) { }
+#endif
 	Vector2D(Vector2D x, Vector2D y) : x(x.x), y(y.y) { }
 	Vector2D(float x, Vector2D y) : x(x), y(y.y) { }
 	Vector2D(Vector2D x, float y) : x(x.x), y(y) { }

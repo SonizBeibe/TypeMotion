@@ -21,16 +21,14 @@
 #include "ass_file.h"
 #include "ass_info.h"
 #include "ass_style.h"
-#include "compat.h"
-#include "command/command.h"
-#include "format.h"
-#include "frame_main.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "project.h"
 #include "selection_controller.h"
 #include "subtitle_format.h"
 #include "text_selection_controller.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/dispatch.h>
 #include <libaegisub/format_path.h>
@@ -38,10 +36,8 @@
 #include <libaegisub/path.h>
 #include <libaegisub/util.h>
 
-#include <wx/msgdlg.h>
-
 namespace {
-	void autosave_timer_changed(wxTimer *timer) {
+	void autosave_timer_changed(ui::Timer *timer) {
 		int freq = OPT_GET("App/Auto/Save Every Seconds")->GetInt();
 		if (freq > 0 && OPT_GET("App/Auto/Save")->GetBool())
 			timer->Start(freq * 1000);
@@ -51,7 +47,7 @@ namespace {
 }
 
 struct SubsController::UndoInfo {
-	wxString undo_description;
+	UiString undo_description;
 	int commit_id;
 
 	std::vector<std::pair<std::string, std::string>> script_info;
@@ -64,7 +60,7 @@ struct SubsController::UndoInfo {
 	int active_line_id = 0;
 	int pos = 0, sel_start = 0, sel_end = 0;
 
-	UndoInfo(const agi::Context *c, wxString const& d, int commit_id)
+	UndoInfo(const agi::Context *c, UiString const& d, int commit_id)
 	: undo_description(d)
 	, commit_id(commit_id)
 	, attachments(c->ass->Attachments)
@@ -147,12 +143,12 @@ SubsController::SubsController(agi::Context *context)
 : context(context)
 , undo_connection(context->ass->AddUndoManager(&SubsController::OnCommit, this))
 , text_selection_connection(context->textSelectionController->AddSelectionListener(&SubsController::OnTextSelectionChanged, this))
+, autosave_timer(ui::CreateTimer([this] { AutoSave(); }))
 , autosave_queue(agi::dispatch::Create())
 {
-	autosave_timer_changed(&autosave_timer);
-	BindConnection(OPT_SUB("App/Auto/Save", [this] { autosave_timer_changed(&autosave_timer); }));
-	BindConnection(OPT_SUB("App/Auto/Save Every Seconds", [this] { autosave_timer_changed(&autosave_timer); }));
-	autosave_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { AutoSave(); });
+	autosave_timer_changed(autosave_timer.get());
+	BindConnection(OPT_SUB("App/Auto/Save", [this] { autosave_timer_changed(autosave_timer.get()); }));
+	BindConnection(OPT_SUB("App/Auto/Save Every Seconds", [this] { autosave_timer_changed(autosave_timer.get()); }));
 }
 
 SubsController::~SubsController() {
@@ -238,16 +234,16 @@ void SubsController::Close() {
 
 int SubsController::TryToClose(bool allow_cancel) const {
 	if (!IsModified())
-		return wxYES;
+		return ui::YES;
 
-	int flags = wxYES_NO;
+	int flags = ui::YES_NO;
 	if (allow_cancel)
-		flags |= wxCANCEL;
-	int result = wxMessageBox(fmt_tl("Do you want to save changes to %s?", Filename()), _("Unsaved changes"), flags, context->parent);
-	if (result == wxYES) {
-		cmd::call("subtitle/save", context);
+		flags |= ui::CANCEL;
+	int result = ui::ShowMessage(fmt_tl("Do you want to save changes to %s?", Filename()), _("Unsaved changes"), flags, context->parent);
+	if (result == ui::YES) {
+		ui::RunCommand("subtitle/save", context);
 		// If it fails saving, return cancel anyway
-		return IsModified() ? wxCANCEL : wxYES;
+		return IsModified() ? ui::CANCEL : ui::YES;
 	}
 	return result;
 }
@@ -262,13 +258,13 @@ void SubsController::AutoSave() {
 
 	auto name = filename.filename();
 	if (name.empty())
-		name = from_wx(_("Untitled"));
+		name = from_ui(_("Untitled"));
 
 	autosaved_commit_id = commit_id;
-	auto frame = context->frame;
+	auto c = context;
 	auto subs_copy = new AssFile(*context->ass);
-	autosave_queue->Async([subs_copy, name, directory, frame] {
-		wxString msg;
+	autosave_queue->Async([subs_copy, name, directory, c] {
+		UiString msg;
 		std::unique_ptr<AssFile> subs(subs_copy);
 
 		try {
@@ -279,14 +275,14 @@ void SubsController::AutoSave() {
 			msg = fmt_tl("File backup saved as \"%s\".", path);
 		}
 		catch (const agi::Exception& err) {
-			msg = _("Exception when attempting to autosave file: ") + to_wx(err.GetMessage());
+			msg = _("Exception when attempting to autosave file: ") + to_ui(err.GetMessage());
 		}
 		catch (...) {
 			msg = _("Unhandled exception when attempting to autosave file.");
 		}
 
-		agi::dispatch::Main().Async([frame, msg] {
-			frame->StatusTimeout(msg);
+		agi::dispatch::Main().Async([c, msg] {
+			ui::StatusTimeout(c, msg);
 		});
 	});
 }
@@ -313,7 +309,9 @@ void SubsController::OnCommit(AssFileCommit c) {
 	commit_id = next_commit_id++;
 	// Allow coalescing only if it's the last change and the file has not been
 	// saved since the last change
+	bool is_coalescing = false;
 	if (commit_id == *c.commit_id+1 && redo_stack.empty() && saved_commit_id+1 != commit_id) {
+		is_coalescing = true;
 		// If only one line changed just modify it instead of copying the file
 		if (c.single_line && c.single_line->Group() == AssEntryGroup::DIALOGUE) {
 			for (auto& diag : undo_stack.back().events) {
@@ -345,7 +343,9 @@ void SubsController::OnCommit(AssFileCommit c) {
 	while ((int)undo_stack.size() > depth)
 		undo_stack.pop_front();
 
-	if (undo_stack.size() > 1 && OPT_GET("App/Auto/Save on Every Change")->GetBool() && !filename.empty() && CanSave())
+	// Skip saving to disk during coalesced commits (e.g. audio marker drag)
+	// to avoid writing the entire file on every pixel of mouse movement
+	if (!is_coalescing && undo_stack.size() > 1 && OPT_GET("App/Auto/Save on Every Change")->GetBool() && !filename.empty() && CanSave())
 		Save(filename);
 
 	*c.commit_id = commit_id;
@@ -388,12 +388,12 @@ void SubsController::Redo() {
 	text_selection_connection.Unblock();
 }
 
-wxString SubsController::GetUndoDescription() const {
-	return IsUndoStackEmpty() ? wxString() : undo_stack.back().undo_description;
+UiString SubsController::GetUndoDescription() const {
+	return IsUndoStackEmpty() ? UiString() : undo_stack.back().undo_description;
 }
 
-wxString SubsController::GetRedoDescription() const {
-	return IsRedoStackEmpty() ? wxString() : redo_stack.back().undo_description;
+UiString SubsController::GetRedoDescription() const {
+	return IsRedoStackEmpty() ? UiString() : redo_stack.back().undo_description;
 }
 
 agi::fs::path SubsController::Filename() const {
@@ -401,8 +401,8 @@ agi::fs::path SubsController::Filename() const {
 
 	// Apple HIG says "untitled" should not be capitalised
 #ifndef __WXMAC__
-	return from_wx(_("Untitled"));
+	return from_ui(_("Untitled"));
 #else
-	return from_wx(_("untitled"));
+	return from_ui(_("untitled"));
 #endif
 }

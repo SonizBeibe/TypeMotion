@@ -2,6 +2,8 @@
 directory = fribidi
 url = https://github.com/fribidi/fribidi.git
 revision = master
+# gen.tab builds its table generators for the build machine
+diff_files = fribidi-native-cc.diff
 
 [provide]
 fribidi = libfribidi_dep

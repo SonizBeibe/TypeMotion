@@ -18,6 +18,10 @@ project('Aegisub', ['c', 'cpp'],
 
 cmake = import('cmake')
 
+# Build only the subtitle core, without wxWidgets or anything else that only
+# the desktop interface uses (used by the Android app)
+core_only = get_option('core_only')
+
 if host_machine.system() == 'windows'
     add_project_arguments('-DUNICODE', '-DNOMINMAX', '-D_WIN32_WINNT=0x0601', '-wd4702', '-wd4458', '-wd4100', language: 'cpp')
 
@@ -32,7 +36,7 @@ if host_machine.system() == 'windows'
     endif
 endif
 
-if host_machine.system() == 'windows'
+if build_machine.system() == 'windows'
     powershell_exe = find_program('powershell')
     version_sh = [powershell_exe,
                   '-ExecutionPolicy', 'Bypass',
@@ -91,7 +95,7 @@ if host_machine.system() == 'darwin'
     add_project_arguments('-DGL_SILENCE_DEPRECATION', language: 'cpp')
     # meson neither supports objcpp_std nor inherits cpp_std https://github.com/mesonbuild/meson/issues/5495
     add_project_arguments('-std=c++20', language: 'objcpp')
-elif host_machine.system() != 'windows'
+elif host_machine.system() != 'windows' and not core_only
     conf.set('WITH_FONTCONFIG', 1)
     deps += dependency('fontconfig')
 endif
@@ -151,11 +155,19 @@ endif
 
 deps += dependency('zlib')
 
-wx_dep = dependency('wxWidgets', version: '>=' + get_option('wx_version'),
-                    required: false,
-                    modules: ['std', 'stc', 'gl'])
+if core_only
+    # Measuring text for automation scripts reads the fonts with FreeType
+    deps += dependency('freetype2', fallback: ['freetype2', 'freetype_dep'])
+    wx_dep = dependency('', required: false)
+else
+    wx_dep = dependency('wxWidgets', version: '>=' + get_option('wx_version'),
+                        required: false,
+                        modules: ['std', 'stc', 'gl'])
+endif
 
-if wx_dep.found()
+if core_only
+    # The core doesn't use wxWidgets
+elif wx_dep.found()
     deps += wx_dep
     wx_defines_dep = wx_dep
 else
@@ -240,7 +252,14 @@ check_deps = [
     ['uchardet', [], 'uchardet', ['uchardet', 'uchardet_dep'], []],
 ]
 
-if host_machine.system() == 'linux'
+if core_only
+    # Audio output, FFTW (audio spectrum), Hunspell and libportal are only
+    # used by the desktop interface
+    check_deps = [
+        ['ffms2', '>=2.22', 'FFMS2', ['ffms2', 'ffms2_dep'], []],
+        ['uchardet', [], 'uchardet', ['uchardet', 'uchardet_dep'], []],
+    ]
+elif host_machine.system() == 'linux'
     if cc.get_define('__WXGTK3__', dependencies: wx_defines_dep, prefix: '#include <wx/defs.h>') != ''
         check_deps += [['libportal-gtk3', [], 'libportal', [], []]]
     else
@@ -281,7 +300,7 @@ if host_machine.system() == 'windows' and get_option('avisynth').enabled()
     conf.set('WITH_AVISYNTH', 1) # bundled separately with installer
 endif
 
-if host_machine.system() == 'windows' and not get_option('directsound').disabled()
+if host_machine.system() == 'windows' and not get_option('directsound').disabled() and not core_only
     dsound_dep = cc.find_library('dsound', required: get_option('directsound'))
     winmm_dep = cc.find_library('winmm', required: get_option('directsound'))
     ole32_dep = cc.find_library('ole32', required: get_option('directsound'))
@@ -298,11 +317,18 @@ if host_machine.system() == 'windows' and not get_option('directsound').disabled
     endif
 endif
 
+if core_only and host_machine.system() == 'android'
+    # Audio output of the Android app
+    deps += cc.find_library('aaudio')
+    conf.set('WITH_AAUDIO', 1)
+    dep_avail += 'AAudio'
+endif
+
 if host_machine.system() == 'windows' and cc.has_header('dwrite_3.h')
     conf.set('HAVE_DWRITE_3', 1)
 endif
 
-if host_machine.system() == 'darwin'
+if host_machine.system() == 'darwin' and not core_only
     deps += dependency('appleframeworks', modules : ['CoreText', 'CoreFoundation', 'AppKit', 'Carbon', 'IOKit', 'QuartzCore'])
     deps += dependency('appleframeworks', modules : ['ScreenCaptureKit'], required : false)
 endif
@@ -323,7 +349,7 @@ endif
 conf_meson = configuration_data()
 conf_meson.set('DEFAULT_PLAYER_AUDIO', def_audio)
 
-if get_option('enable_update_checker')
+if get_option('enable_update_checker') and not core_only
     curl_disable = ['tool', 'dict', 'file', 'ftp', 'gopher', 'imap', 'ldap', 'ldaps', 'mqtt', 'pop3', 'rtmp', 'rtsp', 'smb', 'smtp', 'telnet', 'tftp']
     curl_options = []
     foreach opt : curl_disable
@@ -371,8 +397,12 @@ endif
 
 deps += subproject('luabins').get_variable('luabins_dep')
 
-dep_gl = dependency('gl', required: false)
-if not dep_gl.found()
+if core_only
+    dep_gl = dependency('', required: false)
+else
+    dep_gl = dependency('gl', required: false)
+endif
+if not dep_gl.found() and not core_only
     if host_machine.system() == 'windows'
         dep_gl = cc.find_library('opengl32', required: false)
     else
@@ -389,7 +419,7 @@ else
     conf.set('HAVE_GL_GLEXT_H', cc.has_header('GL/glext.h'))
 endif
 
-if not dep_gl.found()
+if not dep_gl.found() and not core_only
     error('OpenGL implementation not found')
 endif
 
@@ -447,11 +477,53 @@ endif
 
 subdir('automation')
 subdir('libaegisub')
-subdir('packages')
-subdir('po')
+if not core_only
+    subdir('packages')
+    subdir('po')
+endif
 subdir('src')
 if get_option('tests')
     subdir('tests')
+endif
+
+if core_only
+    # The subtitle core, for a frontend which implements ui_hooks.h, the
+    # translation functions of i18n.h and the parts of the automation
+    # interface which show things (see headless/ for an example)
+    core_args = conf_defines + ['-DTYPEMOTION_NO_WX']
+    core_inc = [libaegisub_inc, libresrc_inc, version_inc, include_directories('src')]
+
+    libtypemotion_core = static_library('typemotion_core', core_src, version_h,
+                                        c_args: core_args,
+                                        cpp_args: core_args,
+                                        include_directories: core_inc,
+                                        dependencies: deps)
+
+    typemotion_core_dep = declare_dependency(compile_args: core_args,
+                                             include_directories: core_inc,
+                                             link_with: [libtypemotion_core, libresrc, libaegisub, libytt],
+                                             dependencies: deps)
+
+    # Command line tool to use the core without any interface
+    executable('typemotion-headless', headless_src,
+               dependencies: typemotion_core_dep,
+               install: false)
+
+    # The native library of the Android app
+    if host_machine.system() == 'android' or get_option('jni_bridge')
+        if host_machine.system() == 'android'
+            jni_deps = [cc.find_library('log')]
+        else
+            # Meson finds the JDK's jni.h through its Java support
+            add_languages('java', native: false)
+            jni_deps = [dependency('jni', version: '>=1.6')]
+        endif
+        shared_library('typemotion', android_src,
+                       dependencies: [typemotion_core_dep] + jni_deps,
+                       install: false)
+    endif
+
+    subdir_done()
 endif
 
 aegisub_cpp_pch = ['src/include/agi_pre.h']
@@ -468,7 +540,7 @@ endif
 aegisub = executable('TypeMotion', aegisub_src, version_h, resrc, aegisub_order_dep,
                      c_args: aegisub_defines,
                      cpp_args: aegisub_defines,
-                     link_with: [libresrc, libaegisub],
+                     link_with: [libresrc, libaegisub, libytt],
                      link_args: link_args,
                      link_depends: link_depends,
                      include_directories: [libaegisub_inc, libresrc_inc, version_inc, include_directories('src')],

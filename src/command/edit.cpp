@@ -35,10 +35,8 @@
 #include "../ass_file.h"
 #include "../ass_karaoke.h"
 #include "../ass_style.h"
-#include "../compat.h"
-#include "../dialog_search_replace.h"
 #include "../dialogs.h"
-#include "../format.h"
+#include "../i18n.h"
 #include "../include/aegisub/context.h"
 #include "../initial_line_state.h"
 #include "../libresrc/libresrc.h"
@@ -47,6 +45,7 @@
 #include "../selection_controller.h"
 #include "../subs_controller.h"
 #include "../text_selection_controller.h"
+#include "../ui_hooks.h"
 #include "../utils.h"
 #include "../video_controller.h"
 
@@ -66,9 +65,9 @@
 #include <boost/regex.hpp>
 #include <boost/tokenizer.hpp>
 
-#include <wx/clipbrd.h>
+#ifndef TYPEMOTION_NO_WX
 #include <wx/fontdlg.h>
-#include <wx/textentry.h>
+#endif
 
 namespace {
 	using namespace boost::adaptors;
@@ -296,7 +295,7 @@ int normalize_pos(std::string const& text, int pos) {
 }
 
 template<typename Func>
-void update_lines(const agi::Context *c, wxString const& undo_msg, Func&& f) {
+void update_lines(const agi::Context *c, UiString const& undo_msg, Func&& f) {
 	const auto active_line = c->selectionController->GetActiveLine();
 	const int sel_start = c->textSelectionController->GetSelectionStart();
 	const int sel_end = c->textSelectionController->GetSelectionEnd();
@@ -316,7 +315,7 @@ void update_lines(const agi::Context *c, wxString const& undo_msg, Func&& f) {
 		c->textSelectionController->SetSelection(sel_start + active_sel_shift, sel_end + active_sel_shift);
 }
 
-void toggle_override_tag(const agi::Context *c, bool (AssStyle::*field), const char *tag, wxString const& undo_msg) {
+void toggle_override_tag(const agi::Context *c, bool (AssStyle::*field), const char *tag, UiString const& undo_msg) {
 	update_lines(c, undo_msg, [&](AssDialogue *line, int sel_start, int sel_end, int norm_sel_start, int norm_sel_end) {
 		AssStyle const* const style = c->ass->GetStyle(line->Style);
 		bool state = style ? style->*field : AssStyle().*field;
@@ -492,6 +491,51 @@ struct edit_font final : public Command {
 		const parsed_line active(c->selectionController->GetActiveLine());
 		const int insertion_point = normalize_pos(active.line->Text, c->textSelectionController->GetInsertionPoint());
 
+#ifdef TYPEMOTION_NO_WX
+		auto font_for_line = [&](parsed_line const& line) {
+			const int blockn = line.block_at_pos(insertion_point);
+
+			const AssStyle *style = c->ass->GetStyle(line.line->Style);
+			const AssStyle default_style;
+			if (!style)
+				style = &default_style;
+
+			ui::FontSelection font;
+			font.size = line.get_value(blockn, (int)style->fontsize, "\\fs");
+			font.italic = line.get_value(blockn, style->italic, "\\i");
+			font.bold = line.get_value(blockn, style->bold, "\\b");
+			font.underline = line.get_value(blockn, style->underline, "\\u");
+			font.face = line.get_value(blockn, style->font, "\\fn");
+			return font;
+		};
+
+		const auto initial = font_for_line(active);
+		const auto font = ui::GetFontFromUser(c->parent, initial);
+		if (!font || *font == initial) return;
+
+		update_lines(c, _("set font"), [&](AssDialogue *line, int sel_start, int, int norm_sel_start, int) {
+			parsed_line parsed(line);
+			const auto startfont = font_for_line(parsed);
+			int shift = 0;
+			auto do_set_tag = [&](const char *tag_name, std::string const& value) {
+				shift += parsed.set_tag(tag_name, value, norm_sel_start, sel_start + shift);
+			};
+
+			if (font->face != startfont.face)
+				do_set_tag("\\fn", font->face);
+			if (font->size != startfont.size)
+				do_set_tag("\\fs", std::to_string(font->size));
+			if (font->bold != startfont.bold)
+				do_set_tag("\\b", std::to_string(font->bold));
+			if (font->italic != startfont.italic)
+				do_set_tag("\\i", std::to_string(font->italic));
+			// The desktop version also sets \i when underline changes
+			if (font->underline != startfont.underline)
+				do_set_tag("\\i", std::to_string(font->underline));
+
+			return shift;
+		});
+#else
 		auto font_for_line = [&](parsed_line const& line) -> wxFont {
 			const int blockn = line.block_at_pos(insertion_point);
 
@@ -534,6 +578,7 @@ struct edit_font final : public Command {
 
 			return shift;
 		});
+#endif
 	}
 };
 
@@ -556,7 +601,7 @@ static void copy_lines(agi::Context *c) {
 		"\r\n"));
 }
 
-static void delete_lines(agi::Context *c, wxString const& commit_message) {
+static void delete_lines(agi::Context *c, UiString const& commit_message) {
 	auto const& sel = c->selectionController->GetSelectedSet();
 
 	// Find a line near the active line not being deleted to make the new active line
@@ -615,8 +660,8 @@ struct edit_line_copy final : public validate_sel_nonempty {
 		// and there's no way to do something if the native platform code leaves
 		// it unprocessed
 
-		if (wxTextEntryBase *ctrl = dynamic_cast<wxTextEntryBase*>(c->parent->FindFocus()))
-			ctrl->Copy();
+		if (ui::HasFocusedTextEntry(c))
+			ui::EditFocusedTextEntry(c, ui::TextEntryAction::Copy);
 		else {
 			copy_lines(c);
 		}
@@ -631,8 +676,8 @@ struct edit_line_cut: public validate_sel_nonempty {
 	STR_HELP("Cut subtitles")
 
 	void operator()(agi::Context *c) override {
-		if (wxTextEntryBase *ctrl = dynamic_cast<wxTextEntryBase*>(c->parent->FindFocus()))
-			ctrl->Cut();
+		if (ui::HasFocusedTextEntry(c))
+			ui::EditFocusedTextEntry(c, ui::TextEntryAction::Cut);
 		else {
 			copy_lines(c);
 			delete_lines(c, _("cut lines"));
@@ -753,7 +798,7 @@ struct edit_line_duplicate_shift_back final : public validate_video_and_sel_none
 	}
 };
 
-static void combine_lines(agi::Context *c, void (*combiner)(AssDialogue *, AssDialogue *), wxString const& message) {
+static void combine_lines(agi::Context *c, void (*combiner)(AssDialogue *, AssDialogue *), UiString const& message) {
 	auto sel = c->selectionController->GetSortedSelection();
 
 	AssDialogue *first = sel[0];
@@ -856,18 +901,13 @@ struct edit_line_paste final : public Command {
 	CMD_TYPE(COMMAND_VALIDATE)
 
 	bool Validate(const agi::Context *) override {
-		bool can_paste = false;
-		if (wxTheClipboard->Open()) {
-			can_paste = wxTheClipboard->IsSupported(wxDF_TEXT) || wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
-			wxTheClipboard->Close();
-		}
-		return can_paste;
+		return ui::ClipboardHasText().value_or(false);
 	}
 
 	void operator()(agi::Context *c) override {
-		if (wxTextEntryBase *ctrl = dynamic_cast<wxTextEntryBase*>(c->parent->FindFocus())) {
+		if (ui::HasFocusedTextEntry(c)) {
 			if (!try_paste_lines(c))
-				ctrl->Paste();
+				ui::EditFocusedTextEntry(c, ui::TextEntryAction::Paste);
 		}
 		else {
 			auto pos = c->ass->iterator_to(*c->selectionController->GetActiveLine());
@@ -888,9 +928,9 @@ struct edit_line_paste_over final : public Command {
 
 	bool Validate(const agi::Context *c) override {
 		bool can_paste = !c->selectionController->GetSelectedSet().empty();
-		if (can_paste && wxTheClipboard->Open()) {
-			can_paste = wxTheClipboard->IsSupported(wxDF_TEXT) || wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
-			wxTheClipboard->Close();
+		if (can_paste) {
+			if (auto has_text = ui::ClipboardHasText())
+				can_paste = *has_text;
 		}
 		return can_paste;
 	}
@@ -1159,12 +1199,12 @@ struct edit_redo final : public Command {
 	STR_HELP("Redo last undone action")
 	CMD_TYPE(COMMAND_VALIDATE | COMMAND_DYNAMIC_NAME)
 
-	wxString StrMenu(const agi::Context *c) const override {
+	UiString StrMenu(const agi::Context *c) const override {
 		return c->subsController->IsRedoStackEmpty() ?
 			_("Nothing to &redo") :
 			fmt_tl("&Redo %s", c->subsController->GetRedoDescription());
 	}
-	wxString StrDisplay(const agi::Context *c) const override {
+	UiString StrDisplay(const agi::Context *c) const override {
 		return c->subsController->IsRedoStackEmpty() ?
 			_("Nothing to redo") :
 			fmt_tl("Redo %s", c->subsController->GetRedoDescription());
@@ -1185,12 +1225,12 @@ struct edit_undo final : public Command {
 	STR_HELP("Undo last action")
 	CMD_TYPE(COMMAND_VALIDATE | COMMAND_DYNAMIC_NAME)
 
-	wxString StrMenu(const agi::Context *c) const override {
+	UiString StrMenu(const agi::Context *c) const override {
 		return c->subsController->IsUndoStackEmpty() ?
 			_("Nothing to &undo") :
 			fmt_tl("&Undo %s", c->subsController->GetUndoDescription());
 	}
-	wxString StrDisplay(const agi::Context *c) const override {
+	UiString StrDisplay(const agi::Context *c) const override {
 		return c->subsController->IsUndoStackEmpty() ?
 			_("Nothing to undo") :
 			fmt_tl("Undo %s", c->subsController->GetUndoDescription());

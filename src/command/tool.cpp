@@ -34,22 +34,28 @@
 #include "project.h"
 #include "subs_controller.h"
 #include "subtitle_format.h"
-#include <wx/filedlg.h>
-#include "../compat.h"
-#include "../dialog_manager.h"
-#include "../dialog_styling_assistant.h"
-#include "../dialog_translation.h"
 #include "../dialogs.h"
+#include "../i18n.h"
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
 #include "../resolution_resampler.h"
+#include "../ui_hooks.h"
+#include "../utils.h"
 #include "../video_controller.h"
+#include "../ytt/ytt.h"
+#include "../ytt_export.h"
 
 #include <libaegisub/fs.h>
 #include <libaegisub/path.h>
 
+// The styling and translation assistants are only in the desktop interface
+#ifndef TYPEMOTION_NO_WX
+#include "../dialog_manager.h"
+#include "../dialog_styling_assistant.h"
+#include "../dialog_translation.h"
+
 #include <wx/msgdlg.h>
-#include <wx/utils.h>
+#endif
 
 namespace {
 	using cmd::Command;
@@ -78,15 +84,14 @@ struct tool_export_ytt final : public Command {
 		auto final_ytt_path = SaveFileSelector(_("Export YTT File"), "", "", "ytt", "", c->parent);
 		if (final_ytt_path.empty()) return;
 
-		auto temp_ass_path = c->subsController->Filename().parent_path() / "temp_export.ass";
-		if (c->subsController->Filename().empty()) {
-			temp_ass_path = agi::fs::path("temp_export.ass");
+		try {
+			ExportYtt(c->ass.get(), c->project->Timecodes(), final_ytt_path);
 		}
-
-		const SubtitleFormat *writer = SubtitleFormat::GetWriter(temp_ass_path);
-		if (writer) {
-			writer->ExportFile(c->ass.get(), temp_ass_path, c->project->Timecodes(), "");
-			wxExecute(wxString::Format("\"subprojects/ytsubconverter.exe\" \"%s\" \"%s\"", temp_ass_path.string().c_str(), final_ytt_path.string().c_str()));
+		catch (ytt::ConversionError const& e) {
+			ui::ShowMessage(to_ui(e.what()), _("Export YTT"), ui::OK | ui::ICON_ERROR | ui::CENTRE, c->parent);
+		}
+		catch (agi::Exception const& e) {
+			ui::ShowMessage(to_ui(e.GetMessage()), _("Export YTT"), ui::OK | ui::ICON_ERROR | ui::CENTRE, c->parent);
 		}
 	}
 };
@@ -130,6 +135,7 @@ struct tool_resampleres final : public Command {
 	}
 };
 
+#ifndef TYPEMOTION_NO_WX
 struct tool_style_assistant final : public Command {
 	CMD_NAME("tool/style/assistant")
 	CMD_ICON(styling_toolbutton)
@@ -172,6 +178,8 @@ struct tool_styling_assistant_preview final : public tool_styling_assistant_vali
 	}
 };
 
+#endif
+
 struct tool_style_manager final : public Command {
 	CMD_NAME("tool/style/manager")
 	CMD_ICON(style_toolbutton)
@@ -208,6 +216,7 @@ struct tool_time_postprocess final : public Command {
 	}
 };
 
+#ifndef TYPEMOTION_NO_WX
 struct tool_translation_assistant final : public Command {
 	CMD_NAME("tool/translation_assistant")
 	CMD_ICON(translation_toolbutton)
@@ -288,6 +297,7 @@ struct tool_translation_assistant_insert final : public tool_translation_assista
 		c->dialog->Get<DialogTranslation>()->InsertOriginal();
 	}
 };
+#endif
 }
 
 namespace cmd {
@@ -297,17 +307,21 @@ namespace cmd {
 		reg(std::make_unique<tool_font_collector>());
 		reg(std::make_unique<tool_line_select>());
 		reg(std::make_unique<tool_resampleres>());
+#ifndef TYPEMOTION_NO_WX
 		reg(std::make_unique<tool_style_assistant>());
 		reg(std::make_unique<tool_styling_assistant_commit>());
 		reg(std::make_unique<tool_styling_assistant_preview>());
+#endif
 		reg(std::make_unique<tool_style_manager>());
 		reg(std::make_unique<tool_time_kanji>());
 		reg(std::make_unique<tool_time_postprocess>());
+#ifndef TYPEMOTION_NO_WX
 		reg(std::make_unique<tool_translation_assistant>());
 		reg(std::make_unique<tool_translation_assistant_commit>());
 		reg(std::make_unique<tool_translation_assistant_preview>());
 		reg(std::make_unique<tool_translation_assistant_next>());
 		reg(std::make_unique<tool_translation_assistant_prev>());
 		reg(std::make_unique<tool_translation_assistant_insert>());
+#endif
 	}
 }

@@ -18,7 +18,7 @@
 
 #include "factory_manager.h"
 #include "options.h"
-#include "utils.h"
+#include "utils_core.h"
 
 #include <libaegisub/audio/provider.h>
 #include <libaegisub/fs.h>

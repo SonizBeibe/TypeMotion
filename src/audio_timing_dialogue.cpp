@@ -39,6 +39,7 @@
 #include "selection_controller.h"
 #include "utils.h"
 
+#include <chrono>
 #include <list>
 
 #include <libaegisub/ass/time.h>
@@ -329,6 +330,10 @@ class AudioTimingControllerDialogue final : public AudioTimingController, privat
 	/// The time which was clicked on for alt-dragging mode, or INT_MIN if not in alt-draging mode
 	int clicked_ms = INT_MIN;
 
+	/// Last time an auto-commit was performed during a marker drag, used to
+	/// throttle how often the (expensive) commit pipeline runs while dragging
+	std::chrono::steady_clock::time_point last_autocommit_time;
+
 	/// Autocommit option
 	const agi::OptionValue *auto_commit = OPT_GET("Audio/Auto/Commit");
 	const agi::OptionValue *inactive_line_mode = OPT_GET("Audio/Inactive Lines Display Mode");
@@ -401,6 +406,7 @@ public:
 	std::vector<AudioMarker*> OnLeftClick(int ms, bool ctrl_down, bool alt_down, int sensitivity, int snap_range) override;
 	std::vector<AudioMarker*> OnRightClick(int ms, bool, int sensitivity, int snap_range) override;
 	void OnMarkerDrag(std::vector<AudioMarker*> const& markers, int new_position, int snap_range) override;
+	void OnMarkerDragEnd() override;
 
 	// We have no warning messages currently, maybe add the old "Modified" message back later?
 	wxString GetWarningMessage() const override { return wxString(); }
@@ -697,10 +703,32 @@ void AudioTimingControllerDialogue::SetMarkers(std::vector<AudioMarker*> const& 
 	// Resort the range
 	sort(begin, end, marker_ptr_cmp());
 
-	if (auto_commit->GetBool()) DoCommit(false);
+	// Throttle the auto-commit while dragging: running the full commit
+	// pipeline (undo snapshot, subtitle grid refresh, video re-render) on
+	// every pixel of mouse movement is what makes auto-commit drags stutter.
+	// The visual feedback below (UpdateSelection/AnnounceMarkerMoved) still
+	// runs every pixel so the drag stays smooth, and OnMarkerDragEnd() commits
+	// the final position when the mouse is released.
+	if (auto_commit->GetBool())
+	{
+		auto now = std::chrono::steady_clock::now();
+		if (now - last_autocommit_time >= std::chrono::milliseconds(30))
+		{
+			DoCommit(false);
+			last_autocommit_time = now;
+		}
+	}
 	UpdateSelection();
 
 	AnnounceMarkerMoved();
+}
+
+void AudioTimingControllerDialogue::OnMarkerDragEnd()
+{
+	// Commit the final marker position, which may have been skipped by the
+	// auto-commit throttle during the drag.
+	if (auto_commit->GetBool() && modified_lines.size())
+		DoCommit(false);
 }
 
 void AudioTimingControllerDialogue::RegenerateInactiveLines()

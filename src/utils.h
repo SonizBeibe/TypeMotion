@@ -29,13 +29,18 @@
 
 #pragma once
 
+#include "utils_core.h"
+#include "ui_string.h"
+
 #include <libaegisub/fs.h>
 
 #include <cstdint>
 #include <string>
 
+#ifndef TYPEMOTION_NO_WX
 #include <wx/bitmap.h>
 #include <wx/string.h>
+#endif
 
 class wxFrame;
 class wxKeyEvent;
@@ -44,14 +49,17 @@ class wxMouseEvent;
 class wxStyledTextCtrl;
 class wxWindow;
 
+/// Get the text contents of the clipboard, or empty string on failure
+std::string GetClipboard();
+/// Try to set the clipboard to the given string
+void SetClipboard(std::string const& new_value);
+
+agi::fs::path OpenFileSelector(UiString const& message, std::string const& option_name, std::string const& default_filename, std::string const& default_extension, std::string const& wildcard, wxWindow *parent);
+agi::fs::path SaveFileSelector(UiString const& message, std::string const& option_name, std::string const& default_filename, std::string const& default_extension, std::string const& wildcard, wxWindow *parent);
+
+// The rest is only for the desktop interface
+#ifndef TYPEMOTION_NO_WX
 wxString PrettySize(int bytes);
-
-std::string float_to_string(double val, int precision = 3);
-
-/// @brief Get the smallest power of two that is greater or equal to x
-///
-/// Algorithm from http://bob.allegronetwork.com/prog/tricks.html
-int SmallestPowerOf2(int x);
 
 /// @brief Launch a new copy of Aegisub.
 ///
@@ -70,32 +78,9 @@ void SetFloatOnParent(wxWindow *window);
 /// @return Should the calling code process the event?
 bool ForwardMouseWheelEvent(wxWindow *source, wxMouseEvent &evt);
 
-/// Clean up the given cache directory, limiting the size to max_size
-/// @param directory Directory to clean
-/// @param file_type Wildcard pattern for files to clean up
-/// @param max_size Maximum size of directory in MB
-/// @param max_files Maximum number of files
-void CleanCache(agi::fs::path const& directory, std::string const& file_type, uint64_t max_size, uint64_t max_files = -1);
-
-/// @brief Templated abs() function
-template <typename T> T tabs(T x) { return x < 0 ? -x : x; }
-
-/// Get the middle value of a, b, and c (i.e. clamp b to [a,c])
-/// @precondition a <= c
-template<typename T> inline T mid(T a, T b, T c) {
-	return a > b ? a : (b > c ? c : b);
-}
-
-/// Get the text contents of the clipboard, or empty string on failure
-std::string GetClipboard();
-/// Try to set the clipboard to the given string
-void SetClipboard(std::string const& new_value);
 void SetClipboard(wxBitmap const& new_value);
 
 wxString FontFace(std::string opt_prefix);
-
-agi::fs::path OpenFileSelector(wxString const& message, std::string const& option_name, std::string const& default_filename, std::string const& default_extension, std::string const& wildcard, wxWindow *parent);
-agi::fs::path SaveFileSelector(wxString const& message, std::string const& option_name, std::string const& default_filename, std::string const& default_extension, std::string const& wildcard, wxWindow *parent);
 
 wxString LocalizedLanguageName(wxString const& lang);
 
@@ -116,3 +101,4 @@ namespace ime {
 	bool process_key_event(wxStyledTextCtrl *ctrl, wxKeyEvent &);
 }
 }
+#endif

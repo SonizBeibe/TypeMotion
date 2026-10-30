@@ -258,7 +258,10 @@ void AssParser::AddLine(std::string const& data) {
 			state = &AssParser::ParseEventLine;
 		else if (low == "[script info]")
 			state = &AssParser::ParseScriptInfoLine;
-		else if (low == "[aegisub project garbage]")
+		// TypeMotion writes "[TypeMotion Project Garbage]" instead of the
+		// classic "[Aegisub Project Garbage]"; accept both so linked
+		// video/audio/keyframes are loaded from files saved by either.
+		else if (low == "[aegisub project garbage]" || low == "[typemotion project garbage]")
 			state = &AssParser::ParseMetadataLine;
 		else if (low == "[aegisub extradata]")
 			state = &AssParser::ParseExtradataLine;

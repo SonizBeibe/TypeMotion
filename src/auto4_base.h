@@ -40,7 +40,6 @@
 #include <vector>
 
 class AssStyle;
-class DialogProgress;
 class wxWindow;
 class wxDialog;
 
@@ -53,6 +52,7 @@ namespace Automation4 {
 	DEFINE_EXCEPTION(MacroRunError, AutomationError);
 
 	// Calculate the extents of a text string given a style
+	// Implemented by the user interface (auto4_base_wx.cpp in the desktop program)
 	bool CalculateTextExtents(AssStyle *style, std::string const& text, double &width, double &height, double &descent, double &extlead);
 
 	class ScriptDialog;
@@ -69,7 +69,9 @@ namespace Automation4 {
 	public:
 		ExportFilter(std::string const& name, std::string const& description, int priority);
 
+#ifndef TYPEMOTION_NO_WX
 		wxWindow* GetConfigDialogWindow(wxWindow *parent, agi::Context *c) override;
+#endif
 		void LoadSettings(bool is_default, agi::Context *c) override;
 
 		// Subclasses must implement ProcessSubs from AssExportFilter
@@ -82,8 +84,10 @@ namespace Automation4 {
 	public:
 		virtual ~ScriptDialog() = default;
 
+#ifndef TYPEMOTION_NO_WX
 		/// Create a window with the given parent
 		virtual wxWindow *CreateWindow(wxWindow *parent) = 0;
+#endif
 
 		/// Serialize the values of the controls in this dialog to a string
 		/// suitable for storage in the subtitle script
@@ -97,7 +101,7 @@ namespace Automation4 {
 	class ProgressSink;
 
 	class BackgroundScriptRunner {
-		std::unique_ptr<DialogProgress> impl;
+		std::unique_ptr<agi::BackgroundRunner> impl;
 
 	public:
 		wxWindow *GetParentWindow() const;
@@ -125,6 +129,7 @@ namespace Automation4 {
 
 		/// Show the passed dialog on the GUI thread, blocking the calling
 		/// thread until it closes
+		/// Implemented by the user interface (auto4_base_wx.cpp in the desktop program)
 		void ShowDialog(ScriptDialog *config_dialog);
 		wxWindow *GetParentWindow() const { return bsr->GetParentWindow(); }
 
@@ -217,8 +222,11 @@ namespace Automation4 {
 	/// Manager for scripts in the autoload directory
 	class AutoloadScriptManager final : public ScriptManager {
 		std::string path;
+		std::string unrestricted_path;
 	public:
-		AutoloadScriptManager(std::string path);
+		/// @param path Folders of the official scripts, separated by |
+		/// @param unrestricted_path Folders where any script is loaded, separated by |
+		AutoloadScriptManager(std::string path, std::string unrestricted_path = "");
 		void Reload() override;
 	};
 

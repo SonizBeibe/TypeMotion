@@ -14,7 +14,13 @@ iconv_incs = include_directories(
     'libiconv'
 )
 
-libiconv = static_library('iconv', iconv_src, include_directories: iconv_incs)
+# Where libcharset looks for charset.alias outside of Windows
+iconv_args = []
+if host_machine.system() != 'windows'
+    iconv_args += '-DLIBDIR="' + get_option('prefix') / get_option('libdir') + '"'
+endif
+
+libiconv = static_library('iconv', iconv_src, include_directories: iconv_incs, c_args: iconv_args)
 libiconv_dep = declare_dependency(link_with: libiconv,
                                   include_directories: iconv_incs)
 

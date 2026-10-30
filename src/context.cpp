@@ -19,7 +19,6 @@
 #include "ass_file.h"
 #include "audio_controller.h"
 #include "auto4_base.h"
-#include "dialog_manager.h"
 #include "fold_controller.h"
 #include "initial_line_state.h"
 #include "options.h"
@@ -31,6 +30,13 @@
 #include "video_controller.h"
 
 #include <libaegisub/path.h>
+
+#ifdef TYPEMOTION_NO_WX
+/// Without wxWidgets there are no modeless dialogs to keep track of
+class DialogManager { };
+#else
+#include "dialog_manager.h"
+#endif
 
 namespace agi {
 Context::Context()

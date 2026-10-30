@@ -38,8 +38,10 @@ namespace agi::lua {
 		auto buff = file.read();
 		auto size = static_cast<size_t>(file.size());
 
-		// Discard the BOM if present
-		if (size >= 3 && buff[0] == -17 && buff[1] == -69 && buff[2] == -65) {
+		// Discard the BOM if present. The bytes are compared as unsigned, since
+		// char is unsigned on ARM and -17 would never match there
+		auto bytes = reinterpret_cast<const unsigned char *>(buff);
+		if (size >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
 			buff += 3;
 			size -= 3;
 		}

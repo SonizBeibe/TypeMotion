@@ -34,15 +34,15 @@
 
 #include "ass_style.h"
 
+#include "i18n.h"
 #include "subtitle_format.h"
-#include "utils.h"
+#include "utils_core.h"
 
 #include <libaegisub/format.h>
 #include <libaegisub/split.h>
 
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
-#include <wx/intl.h>
 
 AssStyle::AssStyle() {
 	std::fill(Margin.begin(), Margin.end(), 10);
@@ -191,28 +191,29 @@ void AssStyle::UpdateData() {
 		Margin[0], Margin[1], Margin[2], encoding);
 }
 
-void AssStyle::GetEncodings(wxArrayString &encodingStrings) {
-	encodingStrings.Clear();
-	encodingStrings.Add(wxString("-1 - ") + _("Auto-detect base direction (libass only)"));
-	encodingStrings.Add(wxString("0 - ") + _("ANSI"));
-	encodingStrings.Add(wxString("1 - ") + _("Default"));
-	encodingStrings.Add(wxString("2 - ") + _("Symbol"));
-	encodingStrings.Add(wxString("77 - ") + _("Mac"));
-	encodingStrings.Add(wxString("128 - ") + _("Shift_JIS"));
-	encodingStrings.Add(wxString("129 - ") + _("Hangeul"));
-	encodingStrings.Add(wxString("130 - ") + _("Johab"));
-	encodingStrings.Add(wxString("134 - ") + _("GB2312"));
-	encodingStrings.Add(wxString("136 - ") + _("Chinese BIG5"));
-	encodingStrings.Add(wxString("161 - ") + _("Greek"));
-	encodingStrings.Add(wxString("162 - ") + _("Turkish"));
-	encodingStrings.Add(wxString("163 - ") + _("Vietnamese"));
-	encodingStrings.Add(wxString("177 - ") + _("Hebrew"));
-	encodingStrings.Add(wxString("178 - ") + _("Arabic"));
-	encodingStrings.Add(wxString("186 - ") + _("Baltic"));
-	encodingStrings.Add(wxString("204 - ") + _("Russian"));
-	encodingStrings.Add(wxString("222 - ") + _("Thai"));
-	encodingStrings.Add(wxString("238 - ") + _("East European"));
-	encodingStrings.Add(wxString("255 - ") + _("OEM"));
+std::vector<UiString> AssStyle::GetEncodings() {
+	return {
+		UiString("-1 - ") + _("Auto-detect base direction (libass only)"),
+		UiString("0 - ") + _("ANSI"),
+		UiString("1 - ") + _("Default"),
+		UiString("2 - ") + _("Symbol"),
+		UiString("77 - ") + _("Mac"),
+		UiString("128 - ") + _("Shift_JIS"),
+		UiString("129 - ") + _("Hangeul"),
+		UiString("130 - ") + _("Johab"),
+		UiString("134 - ") + _("GB2312"),
+		UiString("136 - ") + _("Chinese BIG5"),
+		UiString("161 - ") + _("Greek"),
+		UiString("162 - ") + _("Turkish"),
+		UiString("163 - ") + _("Vietnamese"),
+		UiString("177 - ") + _("Hebrew"),
+		UiString("178 - ") + _("Arabic"),
+		UiString("186 - ") + _("Baltic"),
+		UiString("204 - ") + _("Russian"),
+		UiString("222 - ") + _("Thai"),
+		UiString("238 - ") + _("East European"),
+		UiString("255 - ") + _("OEM"),
+	};
 }
 
 int AssStyle::AssToSsa(int ass_align) {

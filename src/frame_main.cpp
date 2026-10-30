@@ -249,7 +249,7 @@ void FrameMain::SetDisplayMode(int video, int audio) {
 }
 
 void FrameMain::UpdateTitle() {
-	wxString newTitle = "TypeMotion PreBuild-v1.0.2";
+	wxString newTitle = "TypeMotion build-experimental-v1";
 
 #if defined(__WXMAC__)
 	// On Mac, set the mark in the close button

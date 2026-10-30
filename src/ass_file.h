@@ -30,6 +30,7 @@
 #pragma once
 
 #include "ass_entry.h"
+#include "ui_string.h"
 
 #include <libaegisub/fs.h>
 #include <libaegisub/signal.h>
@@ -44,7 +45,6 @@ class AssAttachment;
 class AssDialogue;
 class AssInfo;
 class AssStyle;
-class wxString;
 namespace agi { struct Context; }
 
 template<typename T>
@@ -60,7 +60,7 @@ struct ExtradataEntry {
 };
 
 struct AssFileCommit {
-	wxString const& message;
+	UiString const& message;
 	int *commit_id;
 	AssDialogue *single_line;
 };
@@ -204,7 +204,7 @@ public:
 	/// @param commitId    Commit to amend rather than pushing a new commit
 	/// @param single_line Line which was changed, if only one line was
 	/// @return Unique identifier for the new undo group
-	int Commit(wxString const& desc, int type, int commitId = -1, AssDialogue *single_line = nullptr);
+	int Commit(UiString const& desc, int type, int commitId = -1, AssDialogue *single_line = nullptr);
 
 	/// Comparison function for use when sorting
 	typedef bool (*CompFunc)(AssDialogue const& lft, AssDialogue const& rgt);

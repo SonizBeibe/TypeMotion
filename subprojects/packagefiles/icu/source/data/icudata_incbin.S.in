@@ -1,0 +1,9 @@
+/* The ICU data file in an object file, as pkgdata -m static would make it */
+    .section .rodata
+    .globl icudt67_dat
+    .type icudt67_dat, %object
+    .balign 16
+icudt67_dat:
+    .incbin "@ICUDATA_FILE@"
+    .size icudt67_dat, . - icudt67_dat
+    .section .note.GNU-stack, "", %progbits

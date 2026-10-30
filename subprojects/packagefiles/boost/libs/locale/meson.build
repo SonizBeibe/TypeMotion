@@ -57,6 +57,9 @@ if host_machine.system() == 'windows'
         'src/boost/locale/win32/lcid.cpp',
     ])
     locale_args += '-DBOOST_LOCALE_NO_POSIX_BACKEND=1'
+elif host_machine.system() == 'android'
+    # Bionic has no <monetary.h>, so only the ICU and std backends
+    locale_args += ['-DBOOST_LOCALE_NO_POSIX_BACKEND=1', '-DBOOST_LOCALE_NO_WINAPI_BACKEND=1']
 else
     locale_sources += files([
         'src/boost/locale/posix/collate.cpp',

@@ -75,26 +75,6 @@ wxString PrettySize(int bytes) {
 	return agi::wxformat(fmt, size) + " " + suffix[i];
 }
 
-std::string float_to_string(double val, int precision) {
-	std::string fmt = "%." + std::to_string(precision) + "f";
-	std::string s = agi::format(fmt, val);
-	size_t pos = s.find_last_not_of("0");
-	if (pos != s.find(".")) ++pos;
-	s.erase(begin(s) + pos, end(s));
-	return s;
-}
-
-int SmallestPowerOf2(int x) {
-	x--;
-	x |= (x >> 1);
-	x |= (x >> 2);
-	x |= (x >> 4);
-	x |= (x >> 8);
-	x |= (x >> 16);
-	x++;
-	return x;
-}
-
 #ifndef __WXMAC__
 void RestartAegisub() {
 	config::opt->Flush();
@@ -161,59 +141,6 @@ void SetClipboard(wxBitmap const& new_data) {
 		cb->Flush();
 		cb->Close();
 	}
-}
-
-void CleanCache(agi::fs::path const& directory, std::string const& file_type, uint64_t max_size, uint64_t max_files) {
-	static std::unique_ptr<agi::dispatch::Queue> queue;
-	if (!queue)
-		queue = agi::dispatch::Create();
-
-	max_size <<= 20;
-	if (max_files == 0)
-		max_files = std::numeric_limits<uint64_t>::max();
-	queue->Async([=]{
-		LOG_D("utils/clean_cache") << "cleaning " << directory/file_type;
-		uint64_t total_size = 0;
-		using cache_item = std::pair<std::filesystem::file_time_type, agi::fs::path>;
-		std::vector<cache_item> cachefiles;
-		for (auto const& file : agi::fs::DirectoryIterator(directory, file_type)) {
-			agi::fs::path path = directory/file;
-			cachefiles.push_back({agi::fs::ModifiedTime(path), path});
-			total_size += agi::fs::Size(path);
-		}
-
-		if (cachefiles.size() <= max_files && total_size <= max_size) {
-			LOG_D("utils/clean_cache") << agi::format("cache does not need cleaning (maxsize=%d, cursize=%d, maxfiles=%d, numfiles=%d), exiting"
-				, max_size, total_size, max_files, cachefiles.size());
-			return;
-		}
-
-		sort(begin(cachefiles), end(cachefiles), [](cache_item const& a, cache_item const& b) {
-			return a.first < b.first;
-		});
-
-		int deleted = 0;
-		for (auto const& i : cachefiles) {
-			// stop cleaning?
-			if ((total_size <= max_size && cachefiles.size() - deleted <= max_files) || cachefiles.size() - deleted < 2)
-				break;
-
-			uint64_t size = agi::fs::Size(i.second);
-			try {
-				agi::fs::Remove(i.second);
-				LOG_D("utils/clean_cache") << "deleted " << i.second;
-			}
-			catch  (agi::Exception const& e) {
-				LOG_D("utils/clean_cache") << "failed to delete file " << i.second << ": " << e.GetMessage();
-				continue;
-			}
-
-			total_size -= size;
-			++deleted;
-		}
-
-		LOG_D("utils/clean_cache") << "deleted " << deleted << " files, exiting";
-	});
 }
 
 #ifndef __WXOSX_COCOA__

@@ -28,22 +28,18 @@
 // Aegisub Project http://www.aegisub.org/
 
 #include "auto4_base.h"
-#include <curl/curl.h>
 #include <libaegisub/io.h>
-#include <libaegisub/make_unique.h>
+#include <memory>
 #include <libaegisub/format.h>
-#include "libresrc/libresrc.h"
-#include <libaegisub/json.h>
 
 
 #include "ass_file.h"
 #include "ass_style.h"
-#include "compat.h"
-#include "dialog_progress.h"
-#include "format.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "subs_controller.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/ass/string_codec.h>
 #include <libaegisub/dispatch.h>
@@ -52,132 +48,12 @@
 #include <libaegisub/split.h>
 #include <libaegisub/string.h>
 
+#include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <future>
 #include <ranges>
 
-#include <wx/dcmemory.h>
-#include <wx/log.h>
-#include <wx/msgdlg.h>
-#include <wx/sizer.h>
-
-#ifdef __WINDOWS__
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#include <libaegisub/charset_conv_win.h>
-#endif
-
 namespace Automation4 {
-	bool CalculateTextExtents(AssStyle *style, std::string const& text, double &width, double &height, double &descent, double &extlead)
-	{
-		width = height = descent = extlead = 0;
-
-		double fontsize = style->fontsize * 64;
-		double spacing = style->spacing * 64;
-
-#ifdef WIN32
-		// This is almost copypasta from TextSub
-		auto dc = CreateCompatibleDC(nullptr);
-		if (!dc) return false;
-
-		SetMapMode(dc, MM_TEXT);
-
-		LOGFONTW lf = {0};
-		lf.lfHeight = (LONG)fontsize;
-		lf.lfWeight = style->bold ? FW_BOLD : FW_NORMAL;
-		lf.lfItalic = style->italic;
-		lf.lfUnderline = style->underline;
-		lf.lfStrikeOut = style->strikeout;
-		lf.lfCharSet = style->encoding;
-		lf.lfOutPrecision = OUT_TT_PRECIS;
-		lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-		lf.lfQuality = ANTIALIASED_QUALITY;
-		lf.lfPitchAndFamily = DEFAULT_PITCH|FF_DONTCARE;
-		wcsncpy(lf.lfFaceName, agi::charset::ConvertW(style->font).c_str(), 31);
-
-		auto font = CreateFontIndirect(&lf);
-		if (!font) return false;
-
-		auto old_font = SelectObject(dc, font);
-
-		std::wstring wtext(agi::charset::ConvertW(text));
-		if (spacing != 0 ) {
-			width = 0;
-			for (auto c : wtext) {
-				SIZE sz;
-				GetTextExtentPoint32(dc, &c, 1, &sz);
-				width += sz.cx + spacing;
-				height = sz.cy;
-			}
-		}
-		else {
-			SIZE sz;
-			GetTextExtentPoint32(dc, &wtext[0], (int)wtext.size(), &sz);
-			width = sz.cx;
-			height = sz.cy;
-		}
-
-		TEXTMETRIC tm;
-		GetTextMetrics(dc, &tm);
-		descent = tm.tmDescent;
-		extlead = tm.tmExternalLeading;
-
-		SelectObject(dc, old_font);
-		DeleteObject(font);
-		DeleteObject(dc);
-
-#else // not WIN32
-		wxMemoryDC thedc;
-
-		// fix fontsize to be 72 DPI
-		//fontsize = -FT_MulDiv((int)(fontsize+0.5), 72, thedc.GetPPI().y);
-
-		// now try to get a font!
-		// use the font list to get some caching... (chance is the script will need the same font very often)
-		// USING wxTheFontList SEEMS TO CAUSE BAD LEAKS!
-		//wxFont *thefont = wxTheFontList->FindOrCreateFont(
-		wxFont thefont(
-			(int)fontsize,
-			wxFONTFAMILY_DEFAULT,
-			style->italic ? wxFONTSTYLE_ITALIC : wxFONTSTYLE_NORMAL,
-			style->bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL,
-			style->underline,
-			to_wx(style->font),
-			wxFONTENCODING_SYSTEM); // FIXME! make sure to get the right encoding here, make some translation table between windows and wx encodings
-		thedc.SetFont(thefont);
-
-		wxString wtext(to_wx(text));
-		if (spacing) {
-			// If there's inter-character spacing, kerning info must not be used, so calculate width per character
-			// NOTE: Is kerning actually done either way?!
-			for (auto const& wc : wtext) {
-				int a, b, c, d;
-				thedc.GetTextExtent(wc, &a, &b, &c, &d);
-				double scaling = fontsize / (double)(b > 0 ? b : 1); // semi-workaround for missing OS/2 table data for scaling
-				width += (a + spacing)*scaling;
-				height = b > height ? b*scaling : height;
-				descent = c > descent ? c*scaling : descent;
-				extlead = d > extlead ? d*scaling : extlead;
-			}
-		} else {
-			// If the inter-character spacing should be zero, kerning info can (and must) be used, so calculate everything in one go
-			wxCoord lwidth, lheight, ldescent, lextlead;
-			thedc.GetTextExtent(wtext, &lwidth, &lheight, &ldescent, &lextlead);
-			double scaling = fontsize / (double)(lheight > 0 ? lheight : 1); // semi-workaround for missing OS/2 table data for scaling
-			width = lwidth*scaling; height = lheight*scaling; descent = ldescent*scaling; extlead = lextlead*scaling;
-		}
-#endif
-
-		// Compensate for scaling
-		width = style->scalex / 100 * width / 64;
-		height = style->scaley / 100 * height / 64;
-		descent = style->scaley / 100 * descent / 64;
-		extlead = style->scaley / 100 * extlead / 64;
-
-		return true;
-	}
-
 	ExportFilter::ExportFilter(std::string const& name, std::string const& description, int priority)
 	: AssExportFilter(name, description, priority)
 	{
@@ -186,19 +62,6 @@ namespace Automation4 {
 	std::string ExportFilter::GetScriptSettingsIdentifier()
 	{
 		return agi::ass::inline_string_encode(GetName());
-	}
-
-	wxWindow* ExportFilter::GetConfigDialogWindow(wxWindow *parent, agi::Context *c) {
-		config_dialog = GenerateConfigDialog(parent, c);
-
-		if (config_dialog) {
-			std::string const& val = c->ass->Properties.automation_settings[GetScriptSettingsIdentifier()];
-			if (!val.empty())
-				config_dialog->Unserialise(val);
-			return config_dialog->CreateWindow(parent);
-		}
-
-		return nullptr;
 	}
 
 	void ExportFilter::LoadSettings(bool, agi::Context *c) {
@@ -214,24 +77,8 @@ namespace Automation4 {
 	{
 	}
 
-	void ProgressSink::ShowDialog(ScriptDialog *config_dialog)
-	{
-		agi::dispatch::Main().Sync([=, this] {
-			wxDialog w; // container dialog box
-			w.SetExtraStyle(wxWS_EX_VALIDATE_RECURSIVELY);
-			w.Create(bsr->GetParentWindow(), -1, to_wx(bsr->GetTitle()));
-			auto s = new wxBoxSizer(wxHORIZONTAL); // sizer for putting contents in
-			wxWindow *ww = config_dialog->CreateWindow(&w); // generate actual dialog contents
-			s->Add(ww, 0, wxALL, 5); // add contents to dialog
-			w.SetSizerAndFit(s);
-			w.SetLayoutAdaptationMode(wxDIALOG_ADAPTATION_MODE_ENABLED);
-			w.CenterOnParent();
-			w.ShowModal();
-		});
-	}
-
 	BackgroundScriptRunner::BackgroundScriptRunner(wxWindow *parent, std::string const& title)
-	: impl(new DialogProgress(parent, to_wx(title)))
+	: impl(ui::CreateProgress(parent, to_ui(title), UiString()))
 	{
 	}
 
@@ -249,12 +96,12 @@ namespace Automation4 {
 
 	wxWindow *BackgroundScriptRunner::GetParentWindow() const
 	{
-		return impl.get();
+		return ui::GetProgressWindow(impl.get());
 	}
 
 	std::string BackgroundScriptRunner::GetTitle() const
 	{
-		return from_wx(impl->GetTitle());
+		return ui::GetProgressTitle(impl.get());
 	}
 
 	// Script
@@ -312,115 +159,52 @@ namespace Automation4 {
 	}
 
 	// AutoloadScriptManager
-	AutoloadScriptManager::AutoloadScriptManager(std::string path)
+	AutoloadScriptManager::AutoloadScriptManager(std::string path, std::string unrestricted_path)
 	: path(std::move(path))
+	, unrestricted_path(std::move(unrestricted_path))
 	{
 		Reload();
 	}
 
 
-// Helper to write curl data to a string
-static size_t SyncWriteToStringCb(char *contents, size_t size, size_t nmemb, std::string *s) {
-	s->append(contents, size * nmemb);
-	return size * nmemb;
-}
+// Official automation scripts shipped with TypeMotion. This allowlist is
+// compiled into the binary on purpose: it is hidden and tamper-proof, so a
+// user cannot edit it to sneak custom scripts past the check. The build is
+// sensitive and user-added scripts in the autoload folder can break it, so
+// on every autoload scan any .lua that is not on this list is removed,
+// leaving only the official tools. To add or remove an official tool, edit
+// this list and rebuild.
+static const std::set<std::string> official_autoload_scripts = {
+	"CleanTags.lua",
+	"FadeworksFX.lua",
+	"GlitchFX.lua",
+	"KaraokeFX.lua",
+	"LightFX.lua",
+	"OndasRGB_fx.lua",
+	"TimeShifter.lua",
+	"lyger.GradientByChar.lua",
+};
 
-// Helper to write curl data to a file
-static size_t SyncWriteToFileCb(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
+// Delete any .lua in the autoload directories that is not an official script.
+static void EnforceOfficialScripts(std::set<agi::fs::path> const& dirnames) {
+	for (auto const& dirname : dirnames) {
+		if (!agi::fs::DirectoryExists(dirname)) continue;
 
-static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
-	if (dirnames.empty()) return;
-
-	CURL *curl = curl_easy_init();
-	if (!curl) return;
-
-	curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/SonizBeibe/TypeMotion-Dist/contents/tools");
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, "TypeMotion AutoUpdater");
-
-	std::string result;
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, SyncWriteToStringCb);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
-
-	CURLcode res_code = curl_easy_perform(curl);
-
-	long http_code = 0;
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-
-	if (res_code == CURLE_OK && http_code == 200) {
-		try {
-			std::stringstream ss(result);
-			json::UnknownElement root;
-			json::Reader::Read(root, ss);
-
-			if (root.GetType() != json::UnknownElement::Array) return;
-			json::Array& arr = static_cast<json::Array&>(root);
-
-			std::vector<std::pair<std::string, std::string>> remote_files; // name, download_url
-			for (auto const& item : arr) {
-				json::Object& obj = static_cast<json::Object&>(item);
-				auto name_it = obj.find("name");
-				auto url_it = obj.find("download_url");
-				if (name_it != obj.end() && url_it != obj.end()) {
-					if (name_it->second.GetType() == json::UnknownElement::String && url_it->second.GetType() == json::UnknownElement::String) {
-						std::string name = static_cast<json::String const&>(name_it->second);
-						std::string url = static_cast<json::String const&>(url_it->second);
-						if (name.length() > 4 && name.substr(name.length() - 4) == ".lua") {
-							remote_files.push_back({name, url});
-						}
-					}
-				}
-			}
-
-			// Process each directory in the autoload path
-			for (auto const& dirname : dirnames) {
-				if (!agi::fs::DirectoryExists(dirname)) continue;
-
-				std::set<std::string> local_files;
-				for (auto filename : agi::fs::DirectoryIterator(dirname, "*.lua")) {
-					local_files.insert(filename.string());
-				}
-
-				// Remove local files not in remote
-				for (auto const& local_file : local_files) {
-					bool found = false;
-					for (auto const& remote_file : remote_files) {
-						if (remote_file.first == local_file) {
-							found = true;
-							break;
-						}
-					}
-					if (!found) {
-						agi::fs::Remove(dirname / local_file);
-					}
-				}
-
-				// Download remote files not in local
-				for (auto const& remote_file : remote_files) {
-					if (local_files.find(remote_file.first) == local_files.end()) {
-						#ifdef _WIN32
-						FILE *fp = _wfopen((dirname / remote_file.first).wstring().c_str(), L"wb");
-#else
-						FILE *fp = fopen((dirname / remote_file.first).string().c_str(), "wb");
-#endif
-						if (fp) {
-							curl_easy_setopt(curl, CURLOPT_URL, remote_file.second.c_str());
-							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, SyncWriteToFileCb);
-							curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-							curl_easy_perform(curl);
-							fclose(fp);
-						}
-					}
-				}
-			}
-		} catch (...) {
-			// Ignore parse errors or other issues
+		// Collect first, then remove, so we don't mutate the directory while
+		// iterating over it.
+		std::vector<std::string> to_remove;
+		for (auto filename : agi::fs::DirectoryIterator(dirname, "*.lua")) {
+			if (!official_autoload_scripts.count(filename))
+				to_remove.push_back(filename);
+		}
+		for (auto const& filename : to_remove) {
+			// Ignore failures (e.g. a read-only install dir such as Program
+			// Files when not elevated) so a non-removable file never aborts
+			// the autoload scan.
+			try { agi::fs::Remove(dirname / filename); }
+			catch (...) { }
 		}
 	}
-	curl_easy_cleanup(curl);
 }
 
 	void AutoloadScriptManager::Reload()
@@ -439,9 +223,19 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 			dirnames.insert(dirname);
 		}
 
-		SyncAutomationScripts(dirnames);
+		EnforceOfficialScripts(dirnames);
 
-		for (auto const& dirname : dirnames) {
+		// Folders the user puts their own scripts in, which are loaded as they are
+		std::vector<agi::fs::path> all_dirnames(dirnames.begin(), dirnames.end());
+		for (auto tok : agi::Split(unrestricted_path, '|')) {
+			auto dirname = config::path->Decode(std::string(tok));
+			if (!agi::fs::DirectoryExists(dirname)) continue;
+
+			if (std::find(all_dirnames.begin(), all_dirnames.end(), dirname) != all_dirnames.end()) continue;
+			all_dirnames.push_back(dirname);
+		}
+
+		for (auto const& dirname : all_dirnames) {
 			for (auto filename : agi::fs::DirectoryIterator(dirname, "*.*")) {
 				auto s = ScriptFactory::CreateFromFile(dirname/filename, false, false);
 				if (s) {
@@ -453,16 +247,16 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 		}
 
 		if (error_count == 1) {
-			wxLogWarning(_("A script in the Automation autoload directory failed to load.\nPlease review the errors, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
+			ui::LogWarning(_("A script in the Automation autoload directory failed to load.\nPlease review the errors, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
 		}
 		else if (error_count > 1) {
-			wxLogWarning(_("Multiple scripts in the Automation autoload directory failed to load.\nPlease review the errors, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
+			ui::LogWarning(_("Multiple scripts in the Automation autoload directory failed to load.\nPlease review the errors, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
 		}
 		else if (warning_count == 1) {
-			wxLogWarning(_("A script in the Automation autoload directory loaded with warnings.\nPlease review the warnings, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
+			ui::LogWarning(_("A script in the Automation autoload directory loaded with warnings.\nPlease review the warnings, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
 		}
 		else if (warning_count > 1) {
-			wxLogWarning(_("Multiple scripts in the Automation autoload directory loaded with warnings.\nPlease review the warnings, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
+			ui::LogWarning(_("Multiple scripts in the Automation autoload directory loaded with warnings.\nPlease review the warnings, fix them and use the Rescan Autoload Dir button in Automation Manager to load the scripts again."));
 		}
 
 		ScriptsChanged();
@@ -501,8 +295,8 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 				basepath = autobasefn;
 			} else if (first_char == '/') {
 			} else {
-				wxLogWarning(fmt_tl("Automation Script referenced with unknown location specifier character.\nLocation specifier found: %c\nFilename specified: %s",
-					first_char, to_wx(trimmed)));
+				ui::LogWarning(fmt_tl("Automation Script referenced with unknown location specifier character.\nLocation specifier found: %c\nFilename specified: %s",
+					first_char, to_ui(trimmed)));
 				continue;
 			}
 			auto sfname = basepath/trimmed;
@@ -516,8 +310,7 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 			return;
 		}
 
-		wxMessageDialog dlg(
-				nullptr,
+		bool load = ui::ConfirmLoadingScripts(
 				fmt_tl(
 					"The subtitle file you have opened contains local automation scripts. "
 					"Do you want to load the associated automation scripts?\n"
@@ -525,14 +318,11 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 					"List of scripts:\n\n%s\n\n"
 					"You should only load associated automation scripts if you trust their authors! "
 					"They are not required to view or edit the subtitle file."
-					, agi::Join("\n", std::views::transform(resolvedpaths, [](PathTuple const& paths) {return from_wx(fmt_tl("    %s (%s)", to_wx(std::get<0>(paths)), std::get<2>(paths).wstring()));})))
+					, agi::Join("\n", std::views::transform(resolvedpaths, [](PathTuple const& paths) {return from_ui(fmt_tl("    %s (%s)", to_ui(std::get<0>(paths)), std::get<2>(paths).string()));})))
 				, _("Load associated automation scripts?")
-				, wxICON_WARNING | wxOK | wxCANCEL | wxCANCEL_DEFAULT | wxCENTRE
 			);
-		dlg.SetOKCancelLabels(_("Trust the authors && load scripts"), _("No"));
-		auto response = dlg.ShowModal();
 
-		if (response != wxID_OK) {
+		if (!load) {
 			if (!was_empty)
 				ScriptsChanged();
 			else
@@ -544,8 +334,8 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 			if (agi::fs::FileExists(sfname))
 				scripts.emplace_back(Automation4::ScriptFactory::CreateFromFile(sfname, true));
 			else {
-				wxLogWarning(fmt_tl("Automation Script referenced could not be found.\nFilename specified: %s\nSearched relative to: %s\nResolved filename: %s",
-					to_wx(tok), basepath.wstring(), sfname.wstring()));
+				ui::LogWarning(fmt_tl("Automation Script referenced could not be found.\nFilename specified: %s\nSearched relative to: %s\nResolved filename: %s",
+					to_ui(tok), basepath.string(), sfname.string()));
 			}
 		}
 
@@ -605,17 +395,17 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 			auto s = factory->Produce(filename);
 			if (s) {
 				if (!s->GetLoadedState()) {
-					wxLogError(_("Failed to load Automation script '%s':\n%s"), filename.wstring(), to_wx(s->GetDescription()));
+					ui::LogError(fmt_tl("Failed to load Automation script '%s':\n%s", filename.string(), s->GetDescription()));
 				}
 				for (auto const& warning : s->GetWarnings()) {
-					wxLogWarning(_("Warning when loading Automation script '%s':\n%s"), filename.wstring(), to_wx(warning));
+					ui::LogWarning(fmt_tl("Warning when loading Automation script '%s':\n%s", filename.string(), warning));
 				}
 				return s;
 			}
 		}
 
 		if (complain_about_unrecognised) {
-			wxLogError(_("The file was not recognised as an Automation script: %s"), filename.wstring());
+			ui::LogError(fmt_tl("The file was not recognised as an Automation script: %s", filename.string()));
 		}
 
 		return create_unknown ? std::make_unique<UnknownScript>(filename) : nullptr;
@@ -644,18 +434,18 @@ static void SyncAutomationScripts(std::set<agi::fs::path> const& dirnames) {
 			fnfilter += agi::format("%s scripts (%s)|%s|", fact->GetEngineName(), fact->GetFilenamePattern(), filter);
 			catchall += filter + ";";
 		}
-		fnfilter += from_wx(_("All Files")) + " (*.*)|*.*";
+		fnfilter += from_ui(_("All Files")) + " (*.*)|*.*";
 
 		if (!catchall.empty())
 			catchall.pop_back();
 
 		if (Factories().size() > 1)
-			fnfilter = agi::Str(from_wx(_("All Supported Formats")), "|", catchall, "|", fnfilter);
+			fnfilter = agi::Str(from_ui(_("All Supported Formats")), "|", catchall, "|", fnfilter);
 
 		return fnfilter;
 	}
 
 	std::string UnknownScript::GetDescription() const {
-		return from_wx(_("File was not recognized as a script"));
+		return from_ui(_("File was not recognized as a script"));
 	}
 }

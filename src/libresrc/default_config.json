@@ -2,7 +2,7 @@
 	"App" : {
 		"Auto" : {
 			"Backup" : true,
-			"Check For Updates" : true,
+			"Check For Updates" : false,
 			"Load Linked Files" : 2,
 			"Save" : true,
 			"Save Every Seconds" : 60,

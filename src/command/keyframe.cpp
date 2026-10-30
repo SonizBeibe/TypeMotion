@@ -31,7 +31,7 @@
 
 #include "command.h"
 
-#include "../compat.h"
+#include "../i18n.h"
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
 #include "../options.h"
@@ -71,7 +71,7 @@ struct keyframe_open final : public Command {
 		auto filename = OpenFileSelector(
 			_("Open Keyframes File"),
 			"Path/Last/Keyframes", "" ,".txt",
-			from_wx(_("All Supported Formats") +
+			from_ui(_("All Supported Formats") +
 				" (*.txt, *.pass, *.stats, *.log)|*.txt;*.pass;*.stats;*.log|" +
 				_("All Files") + " (*.*)|*.*"),
 			c->parent);
@@ -94,7 +94,7 @@ struct keyframe_save final : public Command {
 	}
 
 	void operator()(agi::Context *c) override {
-		auto filename = SaveFileSelector(_("Save Keyframes File"), "Path/Last/Keyframes", "", "*.key.txt", from_wx(_("Text Files") + " (*.txt)|*.txt"), c->parent);
+		auto filename = SaveFileSelector(_("Save Keyframes File"), "Path/Last/Keyframes", "", "*.key.txt", from_ui(_("Text Files") + " (*.txt)|*.txt"), c->parent);
 		if (filename.empty()) return;
 
 		agi::keyframe::Save(filename, c->project->Keyframes());

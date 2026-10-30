@@ -16,17 +16,11 @@
 
 #include "text_selection_controller.h"
 
-#include <wx/stc/stc.h>
-
-void TextSelectionController::SetControl(wxStyledTextCtrl *ctrl) {
-	this->ctrl = ctrl;
-	if (ctrl)
-		ctrl->Bind(wxEVT_STC_UPDATEUI, &TextSelectionController::UpdateUI, this);
+void TextSelectionController::SetControl(std::unique_ptr<Control> ctrl) {
+	this->ctrl = std::move(ctrl);
 }
 
-TextSelectionController::~TextSelectionController() {
-	if (ctrl) ctrl->Unbind(wxEVT_STC_UPDATEUI, &TextSelectionController::UpdateUI, this);
-}
+TextSelectionController::~TextSelectionController() = default;
 
 #define GET(var, new_value) do { \
 	int tmp = new_value;      \
@@ -43,14 +37,14 @@ TextSelectionController::~TextSelectionController() {
 	}                                    \
 } while (false)
 
-void TextSelectionController::UpdateUI(wxStyledTextEvent &evt) {
+void TextSelectionController::ControlUpdated(int ctrl_insertion_point, bool selection_changed, int ctrl_selection_start, int ctrl_selection_end) {
 	if (changing) return;
 
 	bool changed = false;
-	GET(insertion_point, ctrl->GetInsertionPoint());
-	if (evt.GetUpdated() & wxSTC_UPDATE_SELECTION) {
-		GET(selection_start, ctrl->GetSelectionStart());
-		GET(selection_end, ctrl->GetSelectionEnd());
+	GET(insertion_point, ctrl_insertion_point);
+	if (selection_changed) {
+		GET(selection_start, ctrl_selection_start);
+		GET(selection_end, ctrl_selection_end);
 	}
 	else {
 		GET(selection_start, insertion_point);

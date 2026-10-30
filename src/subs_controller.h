@@ -14,11 +14,13 @@
 //
 // Aegisub Project http://www.aegisub.org/
 
+#include "ui_string.h"
+
 #include <libaegisub/fs.h>
 #include <libaegisub/signal.h>
 
 #include <boost/container/list.hpp>
-#include <wx/timer.h>
+#include <memory>
 
 class SelectionController;
 namespace agi {
@@ -27,6 +29,7 @@ namespace agi {
 	}
 	struct Context;
 }
+namespace ui { class Timer; }
 struct AssFileCommit;
 struct ProjectProperties;
 
@@ -53,7 +56,7 @@ class SubsController : private agi::signal::ConnectionScope {
 	int next_commit_id = 1;
 
 	/// Timer for triggering autosaves
-	wxTimer autosave_timer;
+	std::unique_ptr<ui::Timer> autosave_timer;
 
 	/// Queue which autosaves are performed on
 	std::unique_ptr<agi::dispatch::Queue> autosave_queue;
@@ -108,7 +111,7 @@ public:
 
 	/// If there are unsaved changes, asl the user if they want to save them
 	/// @param allow_cancel Let the user cancel the closing
-	/// @return wxYES, wxNO or wxCANCEL (note: all three are true in a boolean context)
+	/// @return ui::YES, ui::NO or ui::CANCEL (note: all three are true in a boolean context)
 	int TryToClose(bool allow_cancel = true) const;
 
 	/// Can the file be saved in its current format?
@@ -131,7 +134,7 @@ public:
 	/// Check if redo stack is empty
 	bool IsRedoStackEmpty() const { return redo_stack.empty(); };
 	/// Get the description of the first undoable change
-	wxString GetUndoDescription() const;
+	UiString GetUndoDescription() const;
 	/// Get the description of the first redoable change
-	wxString GetRedoDescription() const;
+	UiString GetRedoDescription() const;
 };

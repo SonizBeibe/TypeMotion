@@ -18,17 +18,16 @@
 
 #include "ass_dialogue.h"
 #include "ass_file.h"
-#include "format.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "selection_controller.h"
 #include "text_selection_controller.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/exception.h>
 #include <libaegisub/util.h>
 
 #include <boost/locale/conversion.hpp>
-
-#include <wx/msgdlg.h>
 
 namespace {
 static const size_t bad_pos = -1;
@@ -271,10 +270,10 @@ bool SearchReplaceEngine::ReplaceAll() {
 
 	if (count > 0) {
 		context->ass->Commit(_("replace"), AssFile::COMMIT_DIAG_TEXT);
-		wxMessageBox(fmt_plural(count, "One match was replaced.", "%d matches were replaced.", (int)count));
+		ui::ShowMessage(fmt_plural(count, "One match was replaced.", "%d matches were replaced.", (int)count));
 	}
 	else {
-		wxMessageBox(_("No matches found."));
+		ui::ShowMessage(_("No matches found."));
 	}
 
 	return true;

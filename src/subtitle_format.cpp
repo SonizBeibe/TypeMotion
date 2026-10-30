@@ -36,18 +36,22 @@
 
 #include "ass_dialogue.h"
 #include "ass_file.h"
-#include "compat.h"
-#include "format.h"
+#include "i18n.h"
 #include "subtitle_format_ass.h"
+#ifndef TYPEMOTION_NO_WX
 #include "subtitle_format_ebu3264.h"
+#endif
 #include "subtitle_format_encore.h"
 #include "subtitle_format_microdvd.h"
 #include "subtitle_format_mkv.h"
 #include "subtitle_format_srt.h"
 #include "subtitle_format_ssa.h"
 #include "subtitle_format_transtation.h"
+#ifndef TYPEMOTION_NO_WX
 #include "subtitle_format_ttxt.h"
+#endif
 #include "subtitle_format_txt.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/fs.h>
 #include <libaegisub/vfr.h>
@@ -56,7 +60,6 @@
 
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
-#include <wx/choicdlg.h>
 
 namespace {
 	std::vector<std::unique_ptr<SubtitleFormat>> formats;
@@ -93,38 +96,38 @@ bool SubtitleFormat::CanSave(const AssFile *subs) const {
 }
 
 agi::vfr::Framerate SubtitleFormat::AskForFPS(bool allow_vfr, bool show_smpte, agi::vfr::Framerate const& fps) {
-	wxArrayString choices;
+	std::vector<UiString> choices;
 
 	bool vidLoaded = false;
 	if (fps.IsLoaded()) {
 		vidLoaded = true;
 		if (!fps.IsVFR())
-			choices.Add(fmt_tl("From video (%g)", fps.FPS()));
+			choices.push_back(fmt_tl("From video (%g)", fps.FPS()));
 		else if (allow_vfr)
-			choices.Add(_("From video (VFR)"));
+			choices.push_back(_("From video (VFR)"));
 		else
 			vidLoaded = false;
 	}
 
 	// Standard FPS values
-	choices.Add(_("15.000 FPS"));
-	choices.Add(_("23.976 FPS (Decimated NTSC)"));
-	choices.Add(_("24.000 FPS (FILM)"));
-	choices.Add(_("25.000 FPS (PAL)"));
-	choices.Add(_("29.970 FPS (NTSC)"));
+	choices.push_back(_("15.000 FPS"));
+	choices.push_back(_("23.976 FPS (Decimated NTSC)"));
+	choices.push_back(_("24.000 FPS (FILM)"));
+	choices.push_back(_("25.000 FPS (PAL)"));
+	choices.push_back(_("29.970 FPS (NTSC)"));
 	if (show_smpte)
-		choices.Add(_("29.970 FPS (NTSC with SMPTE dropframe)"));
-	choices.Add(_("30.000 FPS"));
-	choices.Add(_("50.000 FPS (PAL x2)"));
-	choices.Add(_("59.940 FPS (NTSC x2)"));
-	choices.Add(_("60.000 FPS"));
-	choices.Add(_("119.880 FPS (NTSC x4)"));
-	choices.Add(_("120.000 FPS"));
+		choices.push_back(_("29.970 FPS (NTSC with SMPTE dropframe)"));
+	choices.push_back(_("30.000 FPS"));
+	choices.push_back(_("50.000 FPS (PAL x2)"));
+	choices.push_back(_("59.940 FPS (NTSC x2)"));
+	choices.push_back(_("60.000 FPS"));
+	choices.push_back(_("119.880 FPS (NTSC x4)"));
+	choices.push_back(_("120.000 FPS"));
 
-	bool was_busy = wxIsBusy();
-	if (was_busy) wxEndBusyCursor();
-	int choice = wxGetSingleChoiceIndex(_("Please choose the appropriate FPS for the subtitles:"), _("FPS"), choices);
-	if (was_busy) wxBeginBusyCursor();
+	bool was_busy = ui::IsBusy();
+	if (was_busy) ui::EndBusyCursor();
+	int choice = ui::GetSingleChoiceIndex(_("Please choose the appropriate FPS for the subtitles:"), _("FPS"), choices);
+	if (was_busy) ui::BeginBusyCursor();
 
 	using agi::vfr::Framerate;
 	if (choice == -1)
@@ -263,13 +266,18 @@ void SubtitleFormat::MergeIdentical(AssFile &file) {
 void SubtitleFormat::LoadFormats() {
 	if (formats.empty()) {
 		formats.emplace_back(std::make_unique<AssSubtitleFormat>());
+#ifndef TYPEMOTION_NO_WX
+		// EBU STL's export settings dialog and TTXT's XML parser need wxWidgets
 		formats.emplace_back(std::make_unique<Ebu3264SubtitleFormat>());
+#endif
 		formats.emplace_back(std::make_unique<EncoreSubtitleFormat>());
 		formats.emplace_back(std::make_unique<MKVSubtitleFormat>());
 		formats.emplace_back(std::make_unique<MicroDVDSubtitleFormat>());
 		formats.emplace_back(std::make_unique<SRTSubtitleFormat>());
 		formats.emplace_back(std::make_unique<SsaSubtitleFormat>());
+#ifndef TYPEMOTION_NO_WX
 		formats.emplace_back(std::make_unique<TTXTSubtitleFormat>());
+#endif
 		formats.emplace_back(std::make_unique<TXTSubtitleFormat>());
 		formats.emplace_back(std::make_unique<TranStationSubtitleFormat>());
 	}
@@ -315,5 +323,5 @@ std::string SubtitleFormat::GetWildcards(int mode) {
 		agi::AppendJoin(final, ";", cur);
 	}
 
-	return agi::Str(from_wx(_("All Supported Formats")), " (", agi::Join(",", all), ")|", agi::Join(";", all), final);
+	return agi::Str(from_ui(_("All Supported Formats")), " (", agi::Join(",", all), ")|", agi::Join(";", all), final);
 }

@@ -36,10 +36,10 @@
 
 #include "ass_dialogue.h"
 #include "ass_file.h"
-#include "dialogs.h"
 #include "options.h"
 #include "text_file_reader.h"
 #include "text_file_writer.h"
+#include "ui_hooks.h"
 #include "version.h"
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -64,7 +64,7 @@ bool TXTSubtitleFormat::CanWriteFile(agi::fs::path const& filename) const {
 }
 
 void TXTSubtitleFormat::ReadFile(AssFile *target, agi::fs::path const& filename, agi::vfr::Framerate const&, const char *encoding) const {
-	if (!ShowPlainTextImportDialog()) return;
+	if (!ui::ShowPlainTextImportDialog()) return;
 
 	TextFileReader file(filename, encoding, false);
 

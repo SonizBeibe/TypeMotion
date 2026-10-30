@@ -33,10 +33,10 @@
 
 #include "../auto4_base.h"
 #include "../dialogs.h"
-#include "../frame_main.h"
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
 #include "../options.h"
+#include "../ui_hooks.h"
 
 
 namespace {
@@ -51,7 +51,7 @@ struct reload_all final : public Command {
 	void operator()(agi::Context *c) override {
 		config::global_scripts->Reload();
 		c->local_scripts->Reload();
-		c->frame->StatusTimeout(_("Reloaded all Automation scripts"));
+		ui::StatusTimeout(c, _("Reloaded all Automation scripts"));
 	}
 };
 
@@ -63,7 +63,7 @@ struct reload_autoload final : public Command {
 
 	void operator()(agi::Context *c) override {
 		config::global_scripts->Reload();
-		c->frame->StatusTimeout(_("Reloaded autoload Automation scripts"));
+		ui::StatusTimeout(c, _("Reloaded autoload Automation scripts"));
 	}
 };
 
@@ -87,8 +87,8 @@ struct meta final : public Command {
 	STR_HELP("Open automation manager. Ctrl: Rescan autoload folder. Ctrl+Shift: Rescan autoload folder and reload all automation scripts")
 
 	void operator()(agi::Context *c) override {
-		if (wxGetMouseState().CmdDown()) {
-			if (wxGetMouseState().ShiftDown())
+		if (ui::IsCmdDown()) {
+			if (ui::IsShiftDown())
 				cmd::call("am/reload", c);
 			else
 				cmd::call("am/reload/autoload", c);

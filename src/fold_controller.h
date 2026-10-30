@@ -90,6 +90,7 @@ public:
 	AssDialogue *getFoldOpener() const { return parent; }
 	AssDialogue *getNextVisible() const { return nextVisible; }
 	int getVisibleRow() const { return visibleRow; }
+	bool isVisible() const { return visible; }
 };
 
 #include "ass_dialogue.h"

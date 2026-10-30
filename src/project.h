@@ -14,6 +14,8 @@
 //
 // Aegisub Project http://www.aegisub.org/
 
+#include "ui_string.h"
+
 #include <libaegisub/fs.h>
 #include <libaegisub/signal.h>
 #include <libaegisub/vfr.h>
@@ -22,9 +24,8 @@
 #include <vector>
 
 class AsyncVideoProvider;
-class DialogProgress;
-class wxString;
 namespace agi { class AudioProvider; }
+namespace agi { class BackgroundRunner; }
 namespace agi { struct Context; }
 struct ProjectProperties;
 
@@ -45,11 +46,10 @@ class Project : private agi::signal::ConnectionScope {
 	agi::signal::Signal<std::vector<int> const&> AnnounceKeyframesModified;
 
 	bool video_has_subtitles = false;
-	DialogProgress *progress = nullptr;
+	agi::BackgroundRunner *progress = nullptr;
 	agi::Context *context = nullptr;
 
-	void ShowError(wxString const& message);
-	void ShowError(std::string const& message);
+	void ShowError(UiString const& message);
 
 	bool DoLoadSubtitles(agi::fs::path const& path, std::string encoding, ProjectProperties &properties);
 	void DoLoadAudio(agi::fs::path const& path, bool quiet);

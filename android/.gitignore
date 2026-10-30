@@ -1,0 +1,8 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+*.iml
+.idea/
+# Built by the NDK step of the build (see README.md)
+native/

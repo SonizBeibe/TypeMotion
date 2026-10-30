@@ -36,14 +36,13 @@
 
 #include "ass_file.h"
 #include "ass_dialogue.h"
-#include "compat.h"
+#include "i18n.h"
 
 #include <algorithm>
 #include <boost/algorithm/string/case_conv.hpp>
-#include <wx/intl.h>
 
 AssFixStylesFilter::AssFixStylesFilter()
-: AssExportFilter(from_wx(_("Fix Styles")), from_wx(_("Fixes styles by replacing any style that isn't available on file with Default.")), -5000)
+: AssExportFilter(from_ui(_("Fix Styles")), from_ui(_("Fixes styles by replacing any style that isn't available on file with Default.")), -5000)
 {
 }
 

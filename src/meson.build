@@ -1,4 +1,5 @@
 subdir('libresrc')
+subdir('ytt')
 
 aegisub_src = files(
     'MatroskaParser.c',
@@ -8,6 +9,7 @@ aegisub_src = files(
     'ass_entry.cpp',
     'ass_export_filter.cpp',
     'ass_exporter.cpp',
+    'ass_exporter_wx.cpp',
     'ass_file.cpp',
     'ass_karaoke.cpp',
     'ass_override.cpp',
@@ -29,9 +31,11 @@ aegisub_src = files(
     'audio_timing_dialogue.cpp',
     'audio_timing_karaoke.cpp',
     'auto4_base.cpp',
+    'auto4_base_wx.cpp',
     'auto4_lua.cpp',
     'auto4_lua_assfile.cpp',
     'auto4_lua_dialog.cpp',
+    'auto4_lua_dialog_wx.cpp',
     'auto4_lua_progresssink.cpp',
     'base_grid.cpp',
     'charset_detect.cpp',
@@ -41,6 +45,7 @@ aegisub_src = files(
     'command/audio.cpp',
     'command/automation.cpp',
     'command/command.cpp',
+    'command/command_wx.cpp',
     'command/edit.cpp',
     'command/grid.cpp',
     'command/help.cpp',
@@ -131,12 +136,15 @@ aegisub_src = files(
     'text_file_reader.cpp',
     'text_file_writer.cpp',
     'text_selection_controller.cpp',
+    'text_selection_controller_wx.cpp',
     'thesaurus.cpp',
     'timeedit_ctrl.cpp',
     'toggle_bitmap.cpp',
     'toolbar.cpp',
     'tooltip_binding.cpp',
+    'ui_hooks_wx.cpp',
     'utils.cpp',
+    'utils_core.cpp',
     'validators.cpp',
     'vector2d.cpp',
     'vector3d.cpp',
@@ -144,6 +152,7 @@ aegisub_src = files(
     'video_box.cpp',
     'video_controller.cpp',
     'video_display.cpp',
+    'video_events.cpp',
     'video_frame.cpp',
     'video_out_gl.cpp',
     'video_provider_cache.cpp',
@@ -161,6 +170,7 @@ aegisub_src = files(
     'visual_tool_rotatez.cpp',
     'visual_tool_scale.cpp',
     'visual_tool_vector_clip.cpp',
+    'ytt_export.cpp',
 )
 
 if host_machine.system() == 'darwin'
@@ -174,7 +184,7 @@ if host_machine.system() == 'darwin'
         aegisub_src += files('osx/scintilla_ime.mm')
     endif
 
-elif host_machine.system() == 'windows'
+elif host_machine.system() == 'windows' and not core_only
     aegisub_src += files(
         'avisynth_wrap.cpp',
         'crash_writer_minidump.cpp',
@@ -259,3 +269,111 @@ foreach opt: opt_src
         aegisub_src += files(opt[1])
     endif
 endforeach
+
+# The files of aegisub_src which don't use wxWidgets, for core_only builds
+core_src = files(
+    'MatroskaParser.c',
+    'ass_attachment.cpp',
+    'ass_dialogue.cpp',
+    'ass_entry.cpp',
+    'ass_export_filter.cpp',
+    'ass_exporter.cpp',
+    'ass_file.cpp',
+    'ass_karaoke.cpp',
+    'ass_override.cpp',
+    'ass_parser.cpp',
+    'ass_style.cpp',
+    'ass_style_storage.cpp',
+    'async_video_provider.cpp',
+    'audio_controller.cpp',
+    'audio_player.cpp',
+    'audio_provider_factory.cpp',
+    'auto4_base.cpp',
+    'auto4_lua.cpp',
+    'auto4_lua_assfile.cpp',
+    'auto4_lua_dialog.cpp',
+    'auto4_lua_progresssink.cpp',
+    'charset_detect.cpp',
+    'colorspace.cpp',
+    'command/automation.cpp',
+    'command/command.cpp',
+    'command/command_core.cpp',
+    'command/edit.cpp',
+    'command/grid.cpp',
+    'command/keyframe.cpp',
+    'command/recent.cpp',
+    'command/subtitle.cpp',
+    'command/time.cpp',
+    'command/timecode.cpp',
+    'command/tool.cpp',
+    'context.cpp',
+    'export_fixstyle.cpp',
+    'fold_controller.cpp',
+    'font_index.cpp',
+    'initial_line_state.cpp',
+    'mkv_wrap.cpp',
+    'project.cpp',
+    'resolution_resampler.cpp',
+    'search_replace_engine.cpp',
+    'selection_controller.cpp',
+    'spline_curve.cpp',
+    'subs_controller.cpp',
+    'subtitle_format.cpp',
+    'subtitle_format_ass.cpp',
+    'subtitle_format_encore.cpp',
+    'subtitle_format_microdvd.cpp',
+    'subtitle_format_srt.cpp',
+    'subtitle_format_ssa.cpp',
+    'subtitle_format_transtation.cpp',
+    'subtitle_format_txt.cpp',
+    'subtitles_provider.cpp',
+    'subtitles_provider_libass.cpp',
+    'task_queue.cpp',
+    'text_extents.cpp',
+    'text_file_reader.cpp',
+    'text_file_writer.cpp',
+    'text_selection_controller.cpp',
+    'utils_core.cpp',
+    'utils_core_ui.cpp',
+    'vector2d.cpp',
+    'vector3d.cpp',
+    'version.cpp',
+    'video_controller.cpp',
+    'video_provider_cache.cpp',
+    'video_provider_dummy.cpp',
+    'video_provider_manager.cpp',
+    'video_provider_yuv4mpeg.cpp',
+    'ytt_export.cpp',
+)
+
+if dep_avail.contains('AAudio')
+    core_src += files('audio_player_aaudio.cpp')
+endif
+
+if dep_avail.contains('FFMS2')
+    core_src += files('audio_provider_ffmpegsource.cpp',
+                      'video_provider_ffmpegsource.cpp',
+                      'ffmpegsource_common.cpp')
+endif
+
+# Command line tool which runs the core without an interface
+headless_src = files(
+    'headless/headless_main.cpp',
+    'headless/headless_ui.cpp',
+)
+
+# The native library of the Android app
+android_src = files(
+    'android/android_ui.cpp',
+    'android/api.cpp',
+    'android/bridge.cpp',
+    'android/crash_report.cpp',
+    'android/dialog_methods.cpp',
+    'android/dialogs.cpp',
+    'android/edit_box.cpp',
+    'android/engine.cpp',
+    'android/jni_util.cpp',
+    'android/json_io.cpp',
+    'android/media.cpp',
+    'android/translations.cpp',
+)

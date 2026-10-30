@@ -50,7 +50,7 @@ std::shared_ptr<VideoFrame> AsyncVideoProvider::ProcFrame(int frame_number, doub
 	try {
 		source_provider->GetFrame(frame_number, *frame);
 	}
-	catch (VideoProviderError const& err) { throw VideoProviderErrorEvent(err); }
+	catch (VideoProviderError const& err) { throw VideoFrameError(err.GetMessage()); }
 
 	if (raw || !subs_provider || !subs) return frame;
 
@@ -73,7 +73,7 @@ std::shared_ptr<VideoFrame> AsyncVideoProvider::ProcFrame(int frame_number, doub
 			}
 		}
 	}
-	catch (agi::Exception const& err) { throw SubtitlesProviderErrorEvent(err.GetMessage()); }
+	catch (agi::Exception const& err) { throw SubtitlesFrameError(err.GetMessage()); }
 
 	try {
 		subs_provider->DrawSubtitles(*frame, time / 1000.);
@@ -147,21 +147,21 @@ std::pair<int, int> AsyncVideoProvider::GetDisplayResolution() const {
 	);
 }
 
-static std::unique_ptr<SubtitlesProvider> get_subs_provider(wxEvtHandler *evt_handler, agi::BackgroundRunner *br) {
+static std::unique_ptr<SubtitlesProvider> get_subs_provider(AsyncVideoProvider::Listener *listener, agi::BackgroundRunner *br) {
 	try {
 		return SubtitlesProviderFactory::GetProvider(br);
 	}
 	catch (agi::Exception const& err) {
-		evt_handler->AddPendingEvent(SubtitlesProviderErrorEvent(err.GetMessage()));
+		listener->SubtitlesError(err.GetMessage());
 		return nullptr;
 	}
 }
 
-AsyncVideoProvider::AsyncVideoProvider(agi::fs::path const& video_filename, agi::ycbcr::Header colormatrix, wxEvtHandler *parent, agi::BackgroundRunner *br)
+AsyncVideoProvider::AsyncVideoProvider(agi::fs::path const& video_filename, agi::ycbcr::Header colormatrix, std::unique_ptr<Listener> listener_, agi::BackgroundRunner *br)
 : worker(agi::dispatch::Create())
-, subs_provider(get_subs_provider(parent, br))
+, subs_provider(get_subs_provider(listener_.get(), br))
 , source_provider(VideoProviderFactory::GetProvider(video_filename, colormatrix, br))
-, parent(parent)
+, listener(std::move(listener_))
 {
 }
 
@@ -260,13 +260,14 @@ void AsyncVideoProvider::ProcAsync(uint_fast32_t req_version, bool check_updated
 	last_rendered = frame_number;
 
 	try {
-		auto evt = new FrameReadyEvent(ProcFrame(frame_number, time), time);
-		evt->SetEventType(EVT_FRAME_READY);
-		parent->QueueEvent(evt);
+		listener->FrameReady(ProcFrame(frame_number, time), time);
 	}
-	catch (wxEvent const& err) {
-		// Pass error back to parent thread
-		parent->QueueEvent(err.Clone());
+	// Pass errors back to the parent thread
+	catch (VideoFrameError const& err) {
+		listener->VideoError(err.GetMessage());
+	}
+	catch (SubtitlesFrameError const& err) {
+		listener->SubtitlesError(err.GetMessage());
 	}
 }
 
@@ -280,19 +281,4 @@ void AsyncVideoProvider::SetColorSpace(agi::ycbcr::Header matrix) {
 	worker->Async([this, matrix]() {
 		source_provider->SetColorSpace(matrix);
 	});
-}
-
-wxDEFINE_EVENT(EVT_FRAME_READY, FrameReadyEvent);
-wxDEFINE_EVENT(EVT_VIDEO_ERROR, VideoProviderErrorEvent);
-wxDEFINE_EVENT(EVT_SUBTITLES_ERROR, SubtitlesProviderErrorEvent);
-
-VideoProviderErrorEvent::VideoProviderErrorEvent(VideoProviderError const& err)
-: agi::Exception(std::string(err.GetMessage()))
-{
-	SetEventType(EVT_VIDEO_ERROR);
-}
-SubtitlesProviderErrorEvent::SubtitlesProviderErrorEvent(std::string const& err)
-: agi::Exception(std::string(err))
-{
-	SetEventType(EVT_SUBTITLES_ERROR);
 }

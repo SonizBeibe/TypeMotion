@@ -29,7 +29,7 @@
 
 #include "ass_dialogue.h"
 #include "subtitle_format.h"
-#include "utils.h"
+#include "utils_core.h"
 
 #include <libaegisub/of_type_adaptor.h>
 #include <libaegisub/split.h>

@@ -43,18 +43,17 @@
 #include "audio_controller.h"
 #include "audio_timing.h"
 #include "command/command.h"
-#include "compat.h"
-#include "format.h"
-#include "frame_main.h"
+#include "i18n.h"
 #include "include/aegisub/context.h"
 #include "options.h"
 #include "project.h"
 #include "selection_controller.h"
 #include "subs_controller.h"
 #include "text_selection_controller.h"
+#include "ui_hooks.h"
 #include "video_controller.h"
 #include "video_frame.h"
-#include "utils.h"
+#include "utils_core.h"
 
 #include <libaegisub/dispatch.h>
 #include <libaegisub/lua/ffi.h>
@@ -70,22 +69,19 @@
 #include <boost/scope_exit.hpp>
 #include <cassert>
 #include <mutex>
-#include <wx/clipbrd.h>
-#include <wx/log.h>
-#include <wx/msgdlg.h>
 
 using namespace agi::lua;
 using namespace Automation4;
 
 namespace {
-	wxString get_wxstring(lua_State *L, int idx)
+	UiString get_uistring(lua_State *L, int idx)
 	{
-		return wxString::FromUTF8(lua_tostring(L, idx));
+		return ui_from_utf8(lua_tostring(L, idx));
 	}
 
-	wxString check_wxstring(lua_State *L, int idx)
+	UiString check_uistring(lua_State *L, int idx)
 	{
-		return to_wx(check_string(L, idx));
+		return to_ui(check_string(L, idx));
 	}
 
 	void set_context(lua_State *L, const agi::Context *c)
@@ -119,15 +115,15 @@ namespace {
 
 	int get_translation(lua_State *L)
 	{
-		wxString str(check_wxstring(L, 1));
-		push_value(L, wxGetTranslation(str).utf8_str());
+		UiString str(check_uistring(L, 1));
+		push_value(L, from_ui(translate_ui(str)));
 		return 1;
 	}
 
 	const char *clipboard_get()
 	{
 		std::string data;
-		agi::dispatch::Main().Sync([&] { data = GetClipboard(); });
+		agi::dispatch::Main().Sync([&] { data = ui::GetClipboardText(); });
 		if (data.empty())
 			return nullptr;
 		return strndup(data);
@@ -138,12 +134,7 @@ namespace {
 		bool succeeded = false;
 
 		agi::dispatch::Main().Sync([&] {
-			wxClipboard &cb = *wxTheClipboard;
-			if (cb.Open()) {
-				succeeded = cb.SetData(new wxTextDataObject(wxString::FromUTF8(str)));
-				cb.Close();
-				cb.Flush();
-			}
+			succeeded = ui::SetClipboardText(str);
 		});
 
 		return succeeded;
@@ -179,7 +170,7 @@ namespace {
 		std::string filename = check_string(L, -1);
 		lua_pop(L, 1);
 
-		wxLogWarning(fmt_tl("Warning in Automation script '%s':\n%s", filename, message));
+		ui::LogWarning(fmt_tl("Warning in Automation script '%s':\n%s", filename, message));
 		return 0;
 	}
 
@@ -189,7 +180,7 @@ namespace {
 		int ms = lua_tointeger(L, -1);
 		lua_pop(L, 1);
 		if (c && c->project->Timecodes().IsLoaded())
-			push_value(L, c->videoController->FrameAtTime(ms, agi::vfr::START));
+			push_value(L, c->project->Timecodes().FrameAtTime(ms, agi::vfr::START));
 		else
 			lua_pushnil(L);
 
@@ -202,7 +193,7 @@ namespace {
 		int frame = lua_tointeger(L, -1);
 		lua_pop(L, 1);
 		if (c && c->project->Timecodes().IsLoaded())
-			push_value(L, c->videoController->TimeAtFrame(frame, agi::vfr::START));
+			push_value(L, c->project->Timecodes().TimeAtFrame(frame, agi::vfr::START));
 		else
 			lua_pushnil(L);
 		return 1;
@@ -333,7 +324,8 @@ namespace {
 		}
 
 		if (c && c->project->Timecodes().IsLoaded()) {
-			std::shared_ptr<VideoFrame> frame = c->videoController->GetFrame(frameNumber, !withSubtitles);
+			double timestamp = c->project->Timecodes().TimeAtFrame(frameNumber, agi::vfr::EXACT);
+			std::shared_ptr<VideoFrame> frame = c->project->VideoProvider()->GetFrame(frameNumber, timestamp, !withSubtitles);
 
 			void *userData = lua_newuserdata(L, sizeof(std::shared_ptr<VideoFrame>));
 
@@ -429,13 +421,13 @@ namespace {
 	int lua_set_status_text(lua_State *L)
 	{
 		const agi::Context *c = get_context(L);
-		if (!c || !c->frame) {
+		if (!c || !ui::HasStatusBar(c)) {
 			lua_pushnil(L);
 			return 1;
 		}
 		std::string text = check_string(L, 1);
 		lua_pop(L, 1);
-		agi::dispatch::Main().Async([=] { c->frame->StatusTimeout(to_wx(text)); });
+		agi::dispatch::Main().Async([=] { ui::StatusTimeout(const_cast<agi::Context *>(c), to_ui(text)); });
 		return 0;
 	}
 
@@ -530,8 +522,8 @@ namespace {
 
 	class LuaCommand final : public cmd::Command, private LuaFeature {
 		std::string cmd_name;
-		wxString display;
-		wxString help;
+		UiString display;
+		UiString help;
 		int cmd_type;
 
 	public:
@@ -539,9 +531,9 @@ namespace {
 		~LuaCommand();
 
 		const char* name() const override { return cmd_name.c_str(); }
-		wxString StrMenu(const agi::Context *) const override { return display; }
-		wxString StrDisplay(const agi::Context *) const override { return display; }
-		wxString StrHelp() const override { return help; }
+		UiString StrMenu(const agi::Context *) const override { return display; }
+		UiString StrDisplay(const agi::Context *) const override { return display; }
+		UiString StrHelp() const override { return help; }
 
 		int Type() const override { return cmd_type; }
 
@@ -624,7 +616,7 @@ namespace {
 		// create lua environment
 		L = luaL_newstate();
 		if (!L) {
-			description = from_wx(_("Could not initialize Lua state"));
+			description = from_ui(_("Could not initialize Lua state"));
 			return;
 		}
 
@@ -715,7 +707,7 @@ namespace {
 		// this is where features are registered
 		if (lua_pcall(L, 0, 0, -2)) {
 			// error occurred, assumed to be on top of Lua stack
-			description = from_wx(fmt_tl("Error initialising Lua script \"%s\":\n\n%s", GetPrettyFilename().string(), get_string_or_default(L, -1)));
+			description = from_ui(fmt_tl("Error initialising Lua script \"%s\":\n\n%s", GetPrettyFilename().string(), get_string_or_default(L, -1)));
 			lua_pop(L, 2); // error + error handler
 			return;
 		}
@@ -725,7 +717,7 @@ namespace {
 		lua_getglobal(L, "version");
 		if (lua_isnumber(L, -1) && lua_tointeger(L, -1) == 3) {
 			lua_pop(L, 1); // just to avoid tripping the stackcheck in debug
-			description = from_wx(_("Attempted to load an Automation 3 script as an Automation 4 Lua script. Automation 3 is no longer supported."));
+			description = from_ui(_("Attempted to load an Automation 3 script as an Automation 4 Lua script. Automation 3 is no longer supported."));
 			stackcheck.check_stack(0);
 			return;
 		}
@@ -788,7 +780,7 @@ namespace {
 		for (auto macro : macros) {
 			if (macro->name() == command->name()) {
 				error(L, "A macro named '%s' is already defined in script '%s'",
-					command->StrDisplay(nullptr).utf8_str().data(), name.c_str());
+					from_ui(command->StrDisplay(nullptr)).c_str(), name.c_str());
 			}
 		}
 		macros.push_back(command);
@@ -919,8 +911,8 @@ namespace {
 
 	LuaCommand::LuaCommand(lua_State *L)
 	: LuaFeature(L)
-	, display(check_wxstring(L, 1))
-	, help(get_wxstring(L, 2))
+	, display(check_uistring(L, 1))
+	, help(get_uistring(L, 2))
 	, cmd_type(cmd::COMMAND_NORMAL)
 	{
 		lua_getfield(L, LUA_REGISTRYINDEX, "filename");
@@ -999,14 +991,14 @@ namespace {
 		subsobj->ProcessingComplete();
 
 		if (err) {
-			wxLogWarning(fmt_tl("Runtime error in Lua macro validation function:\n%s", get_wxstring(L, -1)));
+			ui::LogWarning(fmt_tl("Runtime error in Lua macro validation function:\n%s", get_uistring(L, -1)));
 			lua_pop(L, 2);
 			return false;
 		}
 
 		bool result = !!lua_toboolean(L, -2);
 
-		wxString new_help_string(get_wxstring(L, -1));
+		UiString new_help_string(get_uistring(L, -1));
 		if (new_help_string.size()) {
 			help = new_help_string;
 			cmd_type |= cmd::COMMAND_DYNAMIC_HELP;
@@ -1037,7 +1029,7 @@ namespace {
 		push_value(L, original_active);
 
 		try {
-			LuaThreadedCall(L, 3, 2, from_wx(StrDisplay(c)), c->parent, true);
+			LuaThreadedCall(L, 3, 2, from_ui(StrDisplay(c)), c->parent, true);
 		}
 		catch (agi::UserCancelException const&) {
 			subsobj->Cancel();
@@ -1054,7 +1046,7 @@ namespace {
 		if (lua_isnumber(L, -1)) {
 			active_idx = lua_tointeger(L, -1);
 			if (active_idx < 1 || active_idx > (int)lines.size()) {
-				wxLogError(fmt_tl("Active row %d is out of bounds (must be 1-%u)", active_idx, lines.size()));
+				ui::LogError(fmt_tl("Active row %d is out of bounds (must be 1-%u)", active_idx, lines.size()));
 				active_idx = original_active;
 			}
 		}
@@ -1070,13 +1062,13 @@ namespace {
 					return;
 				int cur = lua_tointeger(L, -1);
 				if (cur < 1 || cur > (int)lines.size()) {
-					wxLogError(fmt_tl("Selected row %d is out of bounds (must be 1-%u)", cur, lines.size()));
+					ui::LogError(fmt_tl("Selected row %d is out of bounds (must be 1-%u)", cur, lines.size()));
 					throw LuaForEachBreak();
 				}
 
 				AssEntry *curline = lines[cur - 1];
 				if (typeid(*curline) != typeid(AssDialogue)) {
-					wxLogError(fmt_tl("Selected row %d is not a dialogue line", cur));
+					ui::LogError(fmt_tl("Selected row %d is not a dialogue line", cur));
 					throw LuaForEachBreak();
 				}
 
@@ -1143,7 +1135,7 @@ namespace {
 
 		bool result = false;
 		if (err)
-			wxLogWarning(fmt_tl("Runtime error in Lua macro IsActive function:\n%s", get_wxstring(L, -1)));
+			ui::LogWarning(fmt_tl("Runtime error in Lua macro IsActive function:\n%s", get_uistring(L, -1)));
 		else
 			result = !!lua_toboolean(L, -1);
 
@@ -1249,7 +1241,7 @@ namespace {
 		subsobj->ProcessingComplete();
 
 		if (err) {
-			wxLogWarning(fmt_tl("Runtime error in Lua config dialog function:\n%s", get_wxstring(L, -1)));
+			ui::LogWarning(fmt_tl("Runtime error in Lua config dialog function:\n%s", get_uistring(L, -1)));
 			lua_pop(L, 1); // remove error message
 		} else {
 			// Create config dialogue from table on top of stack

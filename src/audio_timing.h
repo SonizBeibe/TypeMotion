@@ -38,6 +38,7 @@ namespace agi { struct Context; }
 namespace agi::ass { class Karaoke; }
 
 #include "audio_marker.h"
+#include "ui_string.h"
 
 /// @class AudioTimingController
 /// @brief Base class for objects controlling audio timing
@@ -60,7 +61,7 @@ protected:
 public:
 	/// @brief Get any warning message to show in the audio display
 	/// @return The warning message to show, may be empty if there is none
-	virtual wxString GetWarningMessage() const = 0;
+	virtual UiString GetWarningMessage() const = 0;
 
 	/// @brief Get the time range the user is most likely to want to see for the current state
 	/// @return A time range
@@ -171,6 +172,11 @@ public:
 	/// @param new_position Time position the marker was dragged to
 	/// @param snap_range   Maximum snapping range in milliseconds
 	virtual void OnMarkerDrag(std::vector<AudioMarker*> const& marker, int new_position, int snap_range) = 0;
+
+	/// @brief A marker drag finished (mouse button released)
+	/// Lets controllers that throttle work during the drag flush any pending
+	/// state (e.g. a final auto-commit of the last marker position).
+	virtual void OnMarkerDragEnd() { }
 
 	/// @brief Destructor
 	virtual ~AudioTimingController() = default;

@@ -48,6 +48,7 @@
 #include "project.h"
 #include "spline_curve.h"
 #include "utils.h"
+#include "video_events.h"
 #include "video_out_gl.h"
 #include "video_controller.h"
 #include "visual_tool.h"

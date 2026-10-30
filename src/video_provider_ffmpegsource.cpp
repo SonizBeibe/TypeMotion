@@ -37,7 +37,7 @@
 #include "include/aegisub/video_provider.h"
 
 #include "options.h"
-#include "utils.h"
+#include "utils_core.h"
 #include "video_frame.h"
 
 #include <libaegisub/fs.h>

@@ -31,10 +31,14 @@
 
 #include "../include/aegisub/context.h"
 #include "../libresrc/libresrc.h"
-#include "../main.h"
 #include "../options.h"
 #include "../project.h"
 #include "../subs_controller.h"
+#include "../ui_hooks.h"
+
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
+#include "../main.h"
+#endif
 
 
 namespace {
@@ -75,10 +79,10 @@ struct recent_subtitle_entry : public Command {
 	STR_HELP("Open recent subtitles")
 
 	void operator()([[maybe_unused]] agi::Context *c, int id) {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TYPEMOTION_NO_WX)
 		wxGetApp().NewProjectContext().project->LoadSubtitles(config::mru->GetEntry("Subtitle", id));
 #else
-		if (c->subsController->TryToClose() == wxCANCEL) return;
+		if (c->subsController->TryToClose() == ui::CANCEL) return;
 		c->project->LoadSubtitles(config::mru->GetEntry("Subtitle", id));
 #endif
 	}

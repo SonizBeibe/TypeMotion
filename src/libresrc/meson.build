@@ -12,13 +12,15 @@ foreach bfile : fs.read(bitmap_manifest).strip().split('\n')
     endif
 endforeach
 
-resrc = [
-    custom_target('bitmap.{cpp,h}',
-                  command: [respack, '@INPUT@', '@OUTPUT@', meson.current_source_dir() / '../bitmaps'],
-                  input: files(bitmap_manifest),
-                  depend_files: bitmap_files,
-                  output: ['bitmap.cpp', 'bitmap.h'])
-]
+resrc = []
+# The core only uses the default configuration, not the icons
+if not core_only
+    resrc += custom_target('bitmap.{cpp,h}',
+                           command: [respack, '@INPUT@', '@OUTPUT@', meson.current_source_dir() / '../bitmaps'],
+                           input: files(bitmap_manifest),
+                           depend_files: bitmap_files,
+                           output: ['bitmap.cpp', 'bitmap.h'])
+endif
 
 conf_platform = ''
 hotkey_platform = ''
@@ -100,4 +102,8 @@ resrc += custom_target('default_config.{cpp,h}',
 
 
 libresrc_inc = include_directories('.')
-libresrc = static_library('resrc', 'libresrc.cpp', resrc, dependencies: deps)
+if core_only
+    libresrc = static_library('resrc', resrc, cpp_args: '-DTYPEMOTION_NO_WX')
+else
+    libresrc = static_library('resrc', 'libresrc.cpp', resrc, dependencies: deps)
+endif

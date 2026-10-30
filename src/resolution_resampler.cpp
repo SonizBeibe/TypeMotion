@@ -19,7 +19,8 @@
 #include "ass_dialogue.h"
 #include "ass_file.h"
 #include "ass_style.h"
-#include "utils.h"
+#include "i18n.h"
+#include "utils_core.h"
 
 #include <libaegisub/exception.h>
 #include <libaegisub/of_type_adaptor.h>
@@ -29,7 +30,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <wx/intl.h>
 
 enum {
 	LEFT = 0,

@@ -16,10 +16,22 @@
 
 #include <libaegisub/signal.h>
 
+#include <memory>
+
 class wxStyledTextCtrl;
-class wxStyledTextEvent;
 
 class TextSelectionController {
+public:
+	/// The text control whose selection is tracked
+	class Control {
+	public:
+		virtual ~Control() = default;
+		virtual void SetInsertionPoint(int point) = 0;
+		virtual void SetSelectionStart(int start) = 0;
+		virtual void SetSelectionEnd(int end) = 0;
+	};
+
+private:
 	int selection_start = 0;
 	int selection_end = 0;
 	int insertion_point = 0;
@@ -29,9 +41,7 @@ class TextSelectionController {
 	int staged_selection_end = 0;
 	bool has_staged_selection = false;
 
-	wxStyledTextCtrl *ctrl = nullptr;
-
-	void UpdateUI(wxStyledTextEvent &evt);
+	std::unique_ptr<Control> ctrl;
 
 	agi::signal::Signal<> AnnounceSelectionChanged;
 
@@ -56,7 +66,17 @@ public:
 	int GetStagedSelectionEnd() const { return has_staged_selection ? staged_selection_end : selection_end; }
 	int GetStagedInsertionPoint() const { return has_staged_selection ? staged_selection_end : insertion_point; }
 
+	void SetControl(std::unique_ptr<Control> ctrl);
+	/// Track a wxStyledTextCtrl (desktop only, in text_selection_controller_wx.cpp)
 	void SetControl(wxStyledTextCtrl *ctrl);
+
+	/// To be called by the control when its selection may have changed
+	/// @param insertion_point The control's insertion point
+	/// @param selection_changed Whether the selection may have changed; if
+	///                          not, it is collapsed to the insertion point
+	/// @param selection_start The start of the control's selection
+	/// @param selection_end The end of the control's selection
+	void ControlUpdated(int insertion_point, bool selection_changed, int selection_start, int selection_end);
 	~TextSelectionController();
 
 	DEFINE_SIGNAL_ADDERS(AnnounceSelectionChanged, AddSelectionListener)

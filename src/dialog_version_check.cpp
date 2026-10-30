@@ -42,6 +42,7 @@
 #include <libaegisub/scoped_ptr.h>
 #include <libaegisub/split.h>
 #include <libaegisub/json.h>
+#include <libaegisub/cajun/reader.h>
 #include <libaegisub/io.h>
 
 #include <ctime>
@@ -71,6 +72,14 @@
 
 namespace {
 std::mutex VersionCheckLock;
+
+// The cajun JSON API has no non-throwing type query, so probe the type by
+// attempting a cast (the cast operators throw json::Exception on mismatch).
+template<typename T>
+bool json_is(json::UnknownElement const& e) {
+	try { (void)static_cast<T const&>(e); return true; }
+	catch (json::Exception const&) { return false; }
+}
 
 struct AegisubUpdateDescription {
 	std::string url;
@@ -413,22 +422,22 @@ static void PerformOTACheck() {
 			json::UnknownElement root;
 			json::Reader::Read(root, ss);
 
-			if (root.GetType() != json::UnknownElement::Object) return;
+			if (!json_is<json::Object>(root)) return;
 			json::Object& root_obj = static_cast<json::Object&>(root);
 
 			auto tag_it = root_obj.find("tag_name");
-			if (tag_it != root_obj.end() && tag_it->second.GetType() == json::UnknownElement::String) {
+			if (tag_it != root_obj.end() && json_is<json::String>(tag_it->second)) {
 				std::string tag_name = static_cast<json::String const&>(tag_it->second);
 
 				// Compare with actual dynamic version
 				if (VersionIsNewer(tag_name, GetAegisubShortVersionString())) {
 					auto assets_it = root_obj.find("assets");
-					if (assets_it != root_obj.end() && assets_it->second.GetType() == json::UnknownElement::Array) {
+					if (assets_it != root_obj.end() && json_is<json::Array>(assets_it->second)) {
 						json::Array& assets = static_cast<json::Array&>(assets_it->second);
 						if (!assets.empty()) {
 							json::Object& asset_obj = static_cast<json::Object&>(assets.front());
 							auto url_it = asset_obj.find("browser_download_url");
-							if (url_it != asset_obj.end() && url_it->second.GetType() == json::UnknownElement::String) {
+							if (url_it != asset_obj.end() && json_is<json::String>(url_it->second)) {
 								std::string download_url = static_cast<json::String const&>(url_it->second);
 
 								// Download to temp dir

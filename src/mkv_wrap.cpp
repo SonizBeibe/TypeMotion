@@ -36,13 +36,14 @@
 
 #include "ass_file.h"
 #include "ass_parser.h"
-#include "compat.h"
-#include "dialog_progress.h"
+#include "i18n.h"
 #include "MatroskaParser.h"
 #include "options.h"
 #include "subtitle_format_srt.h"
+#include "ui_hooks.h"
 
 #include <libaegisub/ass/time.h>
+#include <libaegisub/background_runner.h>
 #include <libaegisub/file_mapping.h>
 #include <libaegisub/format.h>
 #include <libaegisub/scoped_ptr.h>
@@ -53,8 +54,6 @@
 #include <boost/range/irange.hpp>
 #include <boost/tokenizer.hpp>
 #include <iterator>
-
-#include <wx/choicdlg.h> // Keep this last so wxUSE_CHOICEDLG is set.
 
 struct MkvStdIO final : InputStream {
 	agi::read_file_mapping file;
@@ -243,7 +242,7 @@ void MatroskaWrapper::GetSubtitles(agi::fs::path const& filename, AssFile *targe
 		trackToRead = tracksFound[0];
 	// Pick a track
 	else {
-		int choice = wxGetSingleChoiceIndex(_("Choose which track to read:"), _("Multiple subtitle tracks found"), to_wx(tracksNames));
+		int choice = ui::GetSingleChoiceIndex(_("Choose which track to read:"), _("Multiple subtitle tracks found"), to_ui(tracksNames));
 		if (choice == -1)
 			throw agi::UserCancelException("canceled");
 
@@ -288,9 +287,9 @@ void MatroskaWrapper::GetSubtitles(agi::fs::path const& filename, AssFile *targe
 
 	// Progress bar
 	auto totalTime = double(segInfo->Duration) / timecodeScale;
-	DialogProgress progress(nullptr, _("Parsing Matroska"), _("Reading subtitles from Matroska file."));
+	auto progress = ui::CreateProgress(nullptr, _("Parsing Matroska"), _("Reading subtitles from Matroska file."));
 	bool result;
-	progress.Run([&](agi::ProgressSink *ps) { result = read_subtitles(ps, file, &input, srt, totalTime, &parser, cs); });
+	progress->Run([&](agi::ProgressSink *ps) { result = read_subtitles(ps, file, &input, srt, totalTime, &parser, cs); });
 
 	if (!result)
 		throw MatroskaException("Failed to read subtitles");

@@ -566,7 +566,12 @@ public:
 		}
 
 		// We lose the marker drag if the button used to initiate it goes up
-		return !event.ButtonUp(button_used);
+		if (event.ButtonUp(button_used))
+		{
+			timing_controller->OnMarkerDragEnd();
+			return false;
+		}
+		return true;
 	}
 
 	/// Get the position in milliseconds of this group of markers

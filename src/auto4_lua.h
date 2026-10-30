@@ -27,14 +27,19 @@
 //
 // Aegisub Project http://www.aegisub.org/
 
+#pragma once
+
 #include "auto4_base.h"
+#include "ui_string.h"
 
 #include <deque>
 #include <vector>
+
+#ifndef TYPEMOTION_NO_WX
 #include <wx/string.h>
+#endif
 
 class AssEntry;
-class wxControl;
 class wxWindow;
 struct lua_State;
 
@@ -43,7 +48,7 @@ namespace Automation4 {
 	/// @brief Object wrapping an AssFile object for modification through Lua
 	class LuaAssFile {
 		struct PendingCommit {
-			wxString mesage;
+			UiString mesage;
 			int modification_type;
 			std::vector<AssEntry*> lines;
 		};
@@ -126,7 +131,7 @@ namespace Automation4 {
 		/// @param undo_description If there's any uncommitted changes to the
 		///                         file, they will be automatically committed
 		///                         with this description
-		std::vector<AssEntry *> ProcessingComplete(wxString const& undo_description = wxString());
+		std::vector<AssEntry *> ProcessingComplete(UiString const& undo_description = UiString());
 
 		/// End processing without applying any changes made
 		void Cancel();
@@ -169,11 +174,21 @@ namespace Automation4 {
 
 		int x, y, width, height;
 
-		/// Create the associated wxControl
-		virtual wxControl *Create(wxWindow *parent) = 0;
+		/// The kinds of controls a dialog can contain. Each frontend builds
+		/// its own widget for each kind (see auto4_lua_dialog.h).
+		enum class Kind {
+			Label,
+			Edit,
+			Textbox,
+			IntEdit,
+			FloatEdit,
+			Dropdown,
+			Checkbox,
+			Color,
+			ColorAlpha
+		};
 
-		/// Get the default flags to use when inserting this control into a sizer
-		virtual int GetSizerFlags() const { return wxEXPAND; }
+		virtual Kind GetKind() const = 0;
 
 		/// Push the current value of the control onto the lua stack. Must not
 		/// touch the GUI as this may be called on a background thread.
@@ -197,6 +212,22 @@ namespace Automation4 {
 
 	/// A lua-generated dialog or panel in the export options dialog
 	class LuaDialog final : public ScriptDialog {
+	public:
+		/// The standard button IDs a script can give its buttons
+		enum ButtonId {
+			BUTTON_CUSTOM = -1,
+			BUTTON_OK,
+			BUTTON_YES,
+			BUTTON_SAVE,
+			BUTTON_APPLY,
+			BUTTON_CLOSE,
+			BUTTON_NO,
+			BUTTON_CANCEL,
+			BUTTON_HELP,
+			BUTTON_CONTEXT_HELP
+		};
+
+	private:
 		/// Controls in this dialog
 		std::vector<std::unique_ptr<LuaDialogControl>> controls;
 		/// The names and IDs of buttons in this dialog if non-default ones were used
@@ -208,8 +239,6 @@ namespace Automation4 {
 		/// ID of the button pushed (once a button has been pushed)
 		int button_pushed = -1;
 
-		wxWindow *window = nullptr;
-
 	public:
 		LuaDialog(lua_State *L, bool include_buttons);
 
@@ -217,8 +246,19 @@ namespace Automation4 {
 		/// in a single table
 		int LuaReadBack(lua_State *L);
 
+		/// Controls in this dialog, for the frontend to build widgets from
+		std::vector<std::unique_ptr<LuaDialogControl>> const& GetControls() const { return controls; }
+		/// Buttons as (ButtonId, label) pairs; OK and Cancel when the script gave none
+		std::vector<std::pair<int, std::string>> const& GetButtons() const { return buttons; }
+		/// Does the dialog contain any buttons
+		bool UsesButtons() const { return use_buttons; }
+		/// Record which button (an index into GetButtons()) closed the dialog
+		void SetButtonPushed(int index) { button_pushed = index; }
+
 		// ScriptDialog implementation
+#ifndef TYPEMOTION_NO_WX
 		wxWindow* CreateWindow(wxWindow *parent) override;
+#endif
 		std::string Serialise() override;
 		void Unserialise(const std::string &serialised) override;
 	};

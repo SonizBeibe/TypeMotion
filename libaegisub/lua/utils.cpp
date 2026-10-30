@@ -229,9 +229,15 @@ int exception_wrapper(lua_State *L, int (*func)(lua_State *L)) {
 		// Error message is already on the stack
 		return lua_error(L);
 	}
+	// On Android, LuaJIT throws its errors through C++ code as exceptions
+	// from another language, which only catch (...) matches. Without it, an
+	// error in Lua code which func called, such as an include()d file's,
+	// goes on to the pcall which catches it instead of ending the app.
+#ifndef __ANDROID__
 	catch (...) {
 		std::terminate();
 	}
+#endif
 }
 
 #ifdef _DEBUG

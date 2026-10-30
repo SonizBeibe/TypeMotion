@@ -174,7 +174,8 @@ DialogStyleEditor::DialogStyleEditor(wxWindow *parent, AssStyle *style, agi::Con
 
 	// Encoding options
 	wxArrayString encodingStrings;
-	AssStyle::GetEncodings(encodingStrings);
+	for (auto const& encoding : AssStyle::GetEncodings())
+		encodingStrings.Add(encoding);
 
 	// Create sizers
 	wxStaticBoxSizer *NameSizer = new wxStaticBoxSizer(wxHORIZONTAL, this, _("Style Name"));

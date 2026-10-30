@@ -1,0 +1,10 @@
+--- a/gen.tab/meson.build
++++ b/gen.tab/meson.build
+@@ -1,6 +1,6 @@
+ # gen.tab
+ 
+-native_cc = meson.get_compiler('c')
++native_cc = meson.get_compiler('c', native: true)
+ 
+ # Don't pick up top-level config.h, as that has defines for the cross-compiler
+ # (if we're cross-compiling), but here we need values for the host compiler/env

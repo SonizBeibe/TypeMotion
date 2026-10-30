@@ -27,14 +27,19 @@
 //
 // Aegisub Project http://www.aegisub.org/
 
+#include "aspect_ratio.h"
+
 #include <libaegisub/signal.h>
 #include <libaegisub/vfr.h>
 #include <libaegisub/ycbcr.h>
 
 #include <chrono>
+#include <memory>
 #include <optional>
 
-#include <wx/timer.h>
+#ifndef TYPEMOTION_NO_WX
+#include <wx/event.h>
+#endif
 
 class AssDialogue;
 class AsyncVideoProvider;
@@ -46,17 +51,18 @@ namespace agi {
 	struct Context;
 	class OptionValue;
 }
+namespace ui { class Timer; }
 
-enum class AspectRatio {
-	Default = 0,
-	Fullscreen,
-	Widescreen,
-	Cinematic,
-	Custom
-};
+#ifdef TYPEMOTION_NO_WX
+/// Without wxWidgets, errors from the video provider don't come as events
+struct VideoControllerEventHandler { };
+#else
+/// The video provider's frames and errors are sent to the controller as events
+using VideoControllerEventHandler = wxEvtHandler;
+#endif
 
 /// Manage stuff related to video playback
-class VideoController final : public wxEvtHandler {
+class VideoController final : public VideoControllerEventHandler {
 	/// Current frame number changed (new frame number)
 	agi::signal::Signal<int> Seek;
 	/// Aspect ratio was changed (type, value)
@@ -73,7 +79,10 @@ class VideoController final : public wxEvtHandler {
 
 	/// Playback timer used to periodically check if we should go to the next
 	/// frame while playing video
-	wxTimer playback;
+	std::unique_ptr<ui::Timer> playback;
+
+	/// Is the playback timer running?
+	bool playing = false;
 
 	/// Time when playback was last started
 	std::chrono::steady_clock::time_point playback_start_time;
@@ -101,10 +110,12 @@ class VideoController final : public wxEvtHandler {
 
 	std::vector<agi::signal::Connection> connections;
 
-	void OnPlayTimer(wxTimerEvent &event);
+	void OnPlayTimer();
 
+#ifndef TYPEMOTION_NO_WX
 	void OnVideoError(VideoProviderErrorEvent const& err);
 	void OnSubtitlesError(SubtitlesProviderErrorEvent const& err);
+#endif
 
 	void OnSubtitlesCommit(int type, const AssDialogue *changed);
 	void OnNewVideoProvider(AsyncVideoProvider *provider);
@@ -114,9 +125,10 @@ class VideoController final : public wxEvtHandler {
 
 public:
 	VideoController(agi::Context *context);
+	~VideoController();
 
 	/// Is the video currently playing?
-	bool IsPlaying() const { return playback.IsRunning(); }
+	bool IsPlaying() const { return playing; }
 
 	/// Get the current frame number
 	int GetFrameN() const { return frame_n; }

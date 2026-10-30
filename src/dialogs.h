@@ -18,7 +18,13 @@
 
 #include <functional>
 #include <string>
+
+#ifndef TYPEMOTION_NO_WX
 #include <wx/string.h>
+#endif
+
+// The desktop program implements these with its dialogs. Without wxWidgets,
+// the program using the core implements the ones the core's commands use.
 
 class AssFile;
 class AsyncVideoProvider;
@@ -53,7 +59,9 @@ bool PromptForResampleSettings(agi::Context *c, ResampleSettings &settings);
 /// Update the video properties for a newly opened video, possibly prompting the user about what to do
 void UpdateVideoProperties(AssFile *file, const AsyncVideoProvider *new_provider, wxWindow *parent);
 
+#ifndef TYPEMOTION_NO_WX
 int GetSelectedChoices(wxWindow *parent, wxArrayInt& selections, wxString const& message, wxString const& caption, wxArrayString const& choices);
+#endif
 
 std::string CreateDummyVideo(wxWindow *parent);
 

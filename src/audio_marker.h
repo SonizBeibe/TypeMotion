@@ -20,9 +20,14 @@
 
 #include <libaegisub/signal.h>
 
+#include "ui_string.h"
+
 #include <memory>
 #include <vector>
+
+#ifndef TYPEMOTION_NO_WX
 #include <wx/string.h>
+#endif
 
 class AudioMarkerKeyframe;
 class Pen;
@@ -99,7 +104,7 @@ public:
 	/// A label for a range of time on the audio display
 	struct AudioLabel {
 		/// Text of the label
-		wxString text;
+		UiString text;
 		/// Range which this label applies to
 		TimeRange range;
 	};
