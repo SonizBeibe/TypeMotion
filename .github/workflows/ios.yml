@@ -19,15 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The engine only changes with the C++ code, so it is reused from an
+      # earlier run when that hasn't changed
+      - name: Reuse the engine
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: engine-out
+          key: ios-engine-${{ hashFiles('src/**', 'libaegisub/**', 'meson.build', 'meson_options.txt', 'subprojects/*.wrap', 'subprojects/packagefiles/**', 'ios/cross/**', '.github/workflows/ios.yml') }}
+
       - name: Install meson and ninja
+        if: steps.cache.outputs.cache-hit != 'true'
         run: pip3 install --break-system-packages meson ninja
 
       # checkasm.wrap redirects to dav1d's own wrap, which only exists once
       # dav1d is downloaded, and meson reads every wrap when it starts
       - name: Download dav1d
+        if: steps.cache.outputs.cache-hit != 'true'
         run: git clone --depth 1 https://github.com/videolan/dav1d.git subprojects/dav1d
 
       - name: Write the cross file
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           echo "iPhoneOS SDK: $SDK"
@@ -37,6 +49,7 @@ jobs:
       # the phone, so it has to know the phone's LuaJIT has no JIT (Apple
       # doesn't let apps generate machine code): LUAJIT_DISABLE_JIT for both
       - name: Configure
+        if: steps.cache.outputs.cache-hit != 'true'
         run: >-
           meson setup build-ios
           --cross-file ios-arm64.ini
@@ -60,6 +73,7 @@ jobs:
           -Dc_args=-DLUAJIT_DISABLE_JIT
 
       - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -o pipefail
           meson compile -C build-ios typemotion_core typemotion-headless typemotion_ios --ninja-args=-k0 2>&1 | tee build.log
@@ -70,6 +84,7 @@ jobs:
           grep -E "error:|Error |undefined symbol|ld: " build.log | sort -u | head -80 || true
 
       - name: Check the result is for iPhone
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           otool -l build-ios/typemotion-headless | grep -A4 LC_BUILD_VERSION
 
@@ -77,6 +92,7 @@ jobs:
       # build folder also has libraries of tools for the Mac (ICU's), which
       # are left out.
       - name: Merge the engine's libraries
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           libs=()
           while IFS= read -r lib; do
@@ -87,16 +103,16 @@ jobs:
             fi
           done < <(find build-ios -name "*.a" | sort)
           printf '%s\n' "${libs[@]}"
-          libtool -static -no_warning_for_no_symbols -o libtypemotion_ios_all.a "${libs[@]}"
-          ls -lh libtypemotion_ios_all.a
+          mkdir -p engine-out
+          libtool -static -no_warning_for_no_symbols -o engine-out/libtypemotion_ios_all.a "${libs[@]}"
+          cp src/ios/typemotion_ios.h engine-out/
+          ls -lh engine-out
 
       - name: Upload the engine
         uses: actions/upload-artifact@v4
         with:
           name: typemotion-engine-ios-arm64
-          path: |
-            libtypemotion_ios_all.a
-            src/ios/typemotion_ios.h
+          path: engine-out/
 
       - name: Upload the meson log
         if: failure()

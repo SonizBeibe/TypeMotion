@@ -28,7 +28,7 @@ class JSONObject() {
     }
 
     fun has(key: String): Boolean = key in map
-    fun isNull(key: String): Boolean = map[key].let { it == null || it === NULL }
+    fun isNull(key: String): Boolean = map[key].let { it == null || it === JsonNull }
     fun remove(key: String): Any? = map.remove(key)
     fun length(): Int = map.size
     fun keys(): Iterator<String> = map.keys.toList().iterator()
