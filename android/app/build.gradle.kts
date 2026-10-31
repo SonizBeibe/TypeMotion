@@ -80,6 +80,8 @@ tasks.named("preBuild") {
 }
 
 dependencies {
+    // The screens and the app's state, shared with the iPhone app
+    implementation(project(":shared"))
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")

@@ -1,0 +1,37 @@
+name: Android app
+
+# Builds the Android app's Kotlin code (the :app module and the screens in
+# :shared, which the iPhone app uses too), without libtypemotion.so, to check
+# that changes to the shared screens still build for Android.
+
+on:
+  push:
+    branches: [ 'claude/**', 'ios*' ]
+    paths: [ 'android/**', '.github/workflows/android-app.yml' ]
+  workflow_dispatch:
+
+jobs:
+  app:
+    name: Android app (Kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build
+        working-directory: android
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleDebug 2>&1 | tee ../gradle.log
+
+      - name: Show the Kotlin errors
+        if: failure()
+        run: |
+          grep -E "^e: |error:|What went wrong" -A3 gradle.log | head -120 || true

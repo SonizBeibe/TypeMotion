@@ -15,4 +15,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "TypeMotion"
-include(":app")
+// :shared has the screens and the app's state, for Android and the iPhone;
+// :app is the Android app
+include(":app", ":shared")

@@ -1,0 +1,79 @@
+# The Xcode project of the iPhone app, generated with XcodeGen by the CI
+# workflow (.github/workflows/ios.yml). See ../README.md.
+name: TypeMotion
+options:
+  bundleIdPrefix: app.typemotion
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  TypeMotion:
+    type: application
+    platform: iOS
+    sources:
+      - path: TypeMotion
+      # The official scripts and the Spanish translation, which the CI
+      # workflow copies here before generating the project
+      - path: Resources/automation
+        type: folder
+        buildPhase: resources
+      - path: Resources/locale
+        type: folder
+        buildPhase: resources
+    info:
+      path: TypeMotion/Info.plist
+      properties:
+        CFBundleDisplayName: TypeMotion
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # The Documents folder is the TypeMotion folder in the Files app
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        # Compose draws at 120 Hz on the iPhones which have it
+        CADisableMinimumFrameDurationOnPhone: true
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.typemotion
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_BITCODE: NO
+        SWIFT_VERSION: "5.0"
+        # The Kotlin framework (TypeMotionShared, static), which Gradle builds
+        FRAMEWORK_SEARCH_PATHS: $(SRCROOT)/Frameworks
+        OTHER_LDFLAGS:
+          - -framework
+          - TypeMotionShared
+          # The engine, if the static framework left it out
+          - -L$(SRCROOT)/Frameworks
+          - -ltypemotion_ios_all
+          - -lc++
+          - -liconv
+          - -lz
+          - -framework
+          - AudioToolbox
+          - -framework
+          - AVFoundation
+          - -framework
+          - CoreText
+          - -framework
+          - CoreGraphics
+          - -framework
+          - CoreVideo
+          - -framework
+          - CoreMedia
+          - -framework
+          - VideoToolbox
+          - -framework
+          - Security
+          - -framework
+          - Metal

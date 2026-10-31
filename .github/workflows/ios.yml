@@ -1,0 +1,189 @@
+name: iOS app
+
+# Builds the iPhone app as an unsigned TypeMotion.ipa, to install with
+# Sideloadly (see ios/README.md): first the engine (core_only: libaegisub,
+# LuaJIT without JIT, libass, FFmpeg, ffms2...) with meson, then the Kotlin
+# screens of android/shared with Gradle, then the app with Xcode.
+
+on:
+  push:
+    branches: [ 'claude/**', 'ios*' ]
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: iPhone engine
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install meson and ninja
+        run: pip3 install --break-system-packages meson ninja
+
+      # checkasm.wrap redirects to dav1d's own wrap, which only exists once
+      # dav1d is downloaded, and meson reads every wrap when it starts
+      - name: Download dav1d
+        run: git clone --depth 1 https://github.com/videolan/dav1d.git subprojects/dav1d
+
+      - name: Write the cross file
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "iPhoneOS SDK: $SDK"
+          sed "s|@SDK@|$SDK|" ios/cross/ios-arm64.ini > ios-arm64.ini
+
+      # LuaJIT's buildvm runs on the Mac and writes the library tables for
+      # the phone, so it has to know the phone's LuaJIT has no JIT (Apple
+      # doesn't let apps generate machine code): LUAJIT_DISABLE_JIT for both
+      - name: Configure
+        run: >-
+          meson setup build-ios
+          --cross-file ios-arm64.ini
+          -Dcore_only=true -Dtests=false
+          -Dffms2=enabled --force-fallback-for=ffms2,ffmpeg,dav1d,libass,zlib,freetype2,fribidi,harfbuzz,uchardet,icu,luajit
+          -Dlocal_boost=true -Ddefault_library=static
+          -Dbuildtype=release -Db_pch=false
+          -Dlibass:require-system-font-provider=false
+          -Dlibass:checkasm=disabled -Dlibass:asm=disabled
+          -Dffmpeg:programs=disabled -Dffmpeg:ffmpeg=disabled -Dffmpeg:ffplay=disabled -Dffmpeg:ffprobe=disabled
+          -Dffmpeg:tests=disabled -Dffmpeg:avdevice=disabled -Dffmpeg:avfilter=disabled -Dffmpeg:postproc=disabled
+          -Dffmpeg:encoders=disabled -Dffmpeg:muxers=disabled -Dffmpeg:filters=disabled -Dffmpeg:hwaccels=disabled
+          -Dffmpeg:devices=disabled -Dffmpeg:indevs=disabled -Dffmpeg:outdevs=disabled
+          -Dffmpeg:network=disabled -Dffmpeg:protocols=disabled -Dffmpeg:file_protocol=enabled
+          -Dffmpeg:bzlib=disabled -Dffmpeg:lzma=disabled -Dffmpeg:libdav1d=enabled -Dffmpeg:zlib=enabled
+          -Ddav1d:enable_tools=false -Ddav1d:enable_tests=false -Ddav1d:enable_examples=false -Ddav1d:enable_docs=false
+          -Dharfbuzz:tests=disabled -Dharfbuzz:docs=disabled
+          -Dfribidi:tests=false -Dfribidi:docs=false
+          -Dfreetype2:png=disabled
+          -Dbuild.c_args=-DLUAJIT_DISABLE_JIT
+          -Dc_args=-DLUAJIT_DISABLE_JIT
+
+      - name: Build
+        run: |
+          set -o pipefail
+          meson compile -C build-ios typemotion_core typemotion-headless typemotion_ios --ninja-args=-k0 2>&1 | tee build.log
+
+      - name: Show the compile errors
+        if: failure()
+        run: |
+          grep -E "error:|Error |undefined symbol|ld: " build.log | sort -u | head -80 || true
+
+      - name: Check the result is for iPhone
+        run: |
+          otool -l build-ios/typemotion-headless | grep -A4 LC_BUILD_VERSION
+
+      # One library with the engine and everything it uses, for Xcode. The
+      # build folder also has libraries of tools for the Mac (ICU's), which
+      # are left out.
+      - name: Merge the engine's libraries
+        run: |
+          libs=()
+          while IFS= read -r lib; do
+            if otool -l "$lib" | grep -A4 LC_BUILD_VERSION | grep -qE "platform (2|IOS)"; then
+              libs+=("$lib")
+            else
+              echo "Not for iPhone: $lib"
+            fi
+          done < <(find build-ios -name "*.a" | sort)
+          printf '%s\n' "${libs[@]}"
+          libtool -static -no_warning_for_no_symbols -o libtypemotion_ios_all.a "${libs[@]}"
+          ls -lh libtypemotion_ios_all.a
+
+      - name: Upload the engine
+        uses: actions/upload-artifact@v4
+        with:
+          name: typemotion-engine-ios-arm64
+          path: |
+            libtypemotion_ios_all.a
+            src/ios/typemotion_ios.h
+
+      - name: Upload the meson log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meson-log
+          path: build-ios/meson-logs/
+
+  app:
+    name: iPhone app
+    needs: engine
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: typemotion-engine-ios-arm64
+          path: engine
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build the Kotlin framework
+        working-directory: android
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon :shared:linkReleaseFrameworkIosArm64 -Ptypemotion.iosEngine="$GITHUB_WORKSPACE/engine" 2>&1 | tee ../gradle.log
+
+      - name: Show the Kotlin errors
+        if: failure()
+        run: |
+          grep -E "^e: |error:|FAILURE|What went wrong" -A3 gradle.log | head -120 || true
+
+      - name: Check the framework has the engine
+        run: |
+          FW=android/shared/build/bin/iosArm64/releaseFramework/TypeMotionShared.framework
+          ls -la "$FW"
+          nm -gU "$FW/TypeMotionShared" 2>/dev/null | grep -c " _tm_init" || echo "tm_init is not in the framework"
+
+      # The same files the Android app's copyEngineData task puts in the APK
+      - name: Copy the scripts and the translation into the app
+        run: |
+          R=ios/app/Resources
+          mkdir -p "$R/automation" "$R/locale" ios/app/Frameworks
+          cp -R android/automation/. "$R/automation/"
+          rsync -a --ignore-existing --exclude meson.build automation/autoload automation/include "$R/automation/"
+          cp po/es.po "$R/locale/"
+          cp -R android/shared/build/bin/iosArm64/releaseFramework/TypeMotionShared.framework ios/app/Frameworks/
+          # Linked too, in case the static framework left out the engine
+          cp engine/libtypemotion_ios_all.a ios/app/Frameworks/
+
+      - name: Generate the Xcode project
+        working-directory: ios/app
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build the app
+        working-directory: ios/app
+        run: |
+          set -o pipefail
+          xcodebuild -project TypeMotion.xcodeproj -scheme TypeMotion -configuration Release \
+            -sdk iphoneos -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee ../../xcode.log | grep -E "error|warning: .*TypeMotion|BUILD" || true
+          test -d build/Build/Products/Release-iphoneos/TypeMotion.app
+
+      - name: Show the Xcode errors
+        if: failure()
+        run: |
+          grep -E "error:|Undefined symbols|ld: |\"_" xcode.log | sort -u | head -120 || true
+
+      - name: Make the .ipa
+        run: |
+          mkdir -p Payload
+          cp -R ios/app/build/Build/Products/Release-iphoneos/TypeMotion.app Payload/
+          zip -qry TypeMotion.ipa Payload
+          ls -lh TypeMotion.ipa
+
+      - name: Upload the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: TypeMotion-ipa
+          path: TypeMotion.ipa

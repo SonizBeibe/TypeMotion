@@ -2,7 +2,12 @@
 
 La app de teléfono de TypeMotion. Usa el mismo núcleo en C++ que el
 programa de escritorio (`src/`, compilado sin wxWidgets) a través de
-`libtypemotion.so`, y una interfaz en Kotlin con Jetpack Compose.
+`libtypemotion.so`, y una interfaz en Kotlin con Compose.
+
+Las pantallas y el estado de la app están en el módulo `shared`
+(Compose Multiplatform), que también usa la app de iPhone (ver
+`../ios/README.md`); el módulo `app` es solo lo de Android. En Windows,
+Gradle se salta las partes de iPhone de `shared`.
 
 ## Compilar
 

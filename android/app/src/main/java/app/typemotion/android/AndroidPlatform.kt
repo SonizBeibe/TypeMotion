@@ -8,20 +8,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
+import app.typemotion.io.File
 import app.typemotion.platform.Folders
-import app.typemotion.platform.FrameImage
 import app.typemotion.platform.Platform
-import java.io.File
-import java.nio.ByteBuffer
 import java.util.Locale
 
 class AndroidPlatform(private val context: Application) : Platform {
@@ -29,10 +24,10 @@ class AndroidPlatform(private val context: Application) : Platform {
     var activity: Activity? = null
 
     override val folders = Folders(
-        data = File(context.filesDir, "data"),
-        user = File(context.filesDir, "user"),
-        cache = context.cacheDir,
-        storage = File(Environment.getExternalStorageDirectory(), "TypeMotion"),
+        data = File(context.filesDir.path, "data"),
+        user = File(context.filesDir.path, "user"),
+        cache = File(context.cacheDir.path),
+        storage = File(Environment.getExternalStorageDirectory().path, "TypeMotion"),
     )
 
     private val preferences = context.getSharedPreferences("typemotion", Context.MODE_PRIVATE)
@@ -47,14 +42,14 @@ class AndroidPlatform(private val context: Application) : Platform {
         if (marker.exists() && marker.readText() == stamp) return
 
         for (folder in listOf("automation", "locale")) {
-            val target = File(folders.data, folder)
+            val target = java.io.File(folders.data.path, folder)
             target.deleteRecursively()
             copyAssets(folder, target)
         }
         marker.writeText(stamp)
     }
 
-    private fun copyAssets(path: String, target: File) {
+    private fun copyAssets(path: String, target: java.io.File) {
         val children = context.assets.list(path) ?: emptyArray()
         if (children.isEmpty()) {
             target.parentFile?.mkdirs()
@@ -62,7 +57,7 @@ class AndroidPlatform(private val context: Application) : Platform {
             return
         }
         target.mkdirs()
-        for (child in children) copyAssets("$path/$child", File(target, child))
+        for (child in children) copyAssets("$path/$child", java.io.File(target, child))
     }
 
     override fun hasStorageAccess(): Boolean =
@@ -89,12 +84,12 @@ class AndroidPlatform(private val context: Application) : Platform {
     }
 
     override fun storageRoots(): List<Pair<String, File>> {
-        val phone = Environment.getExternalStorageDirectory()
+        val phone = File(Environment.getExternalStorageDirectory().path)
         val roots = mutableListOf(
             "Teléfono" to phone,
             "TypeMotion" to folders.storage,
-            "Descargas" to Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            "Documentos" to Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+            "Descargas" to File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path),
+            "Documentos" to File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).path),
         )
         // Memory cards: the folder above the app's own Android/data folder on each
         for (dir in context.getExternalFilesDirs(null).drop(1)) {
@@ -124,14 +119,12 @@ class AndroidPlatform(private val context: Application) : Platform {
         preferences.edit().putString(key, value).apply()
     }
 
-    override fun createFrameImage(width: Int, height: Int): FrameImage = BitmapFrameImage(width, height)
-
-    override val crashReportFile = File(context.filesDir, "crash-report.txt")
+    override val crashReportFile = File(context.filesDir.path, "crash-report.txt")
 
     override val crashReportHeader: String by lazy {
         @Suppress("DEPRECATION")
         val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        val abi = File(context.applicationInfo.nativeLibraryDir).name
+        val abi = java.io.File(context.applicationInfo.nativeLibraryDir).name
         "TypeMotion $version ($abi)\n" +
             "${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
             "ABI del teléfono: ${Build.SUPPORTED_ABIS.joinToString()}\n"
@@ -140,13 +133,4 @@ class AndroidPlatform(private val context: Application) : Platform {
     override fun closeApp() {
         activity?.finishAndRemoveTask()
     }
-}
-
-private class BitmapFrameImage(override val width: Int, override val height: Int) : FrameImage {
-    private val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-    // ARGB_8888 bitmaps are RGBA in memory, as the engine copies frames
-    override fun write(pixels: ByteBuffer) = bitmap.copyPixelsFromBuffer(pixels)
-
-    override fun image(): ImageBitmap = bitmap.asImageBitmap()
 }

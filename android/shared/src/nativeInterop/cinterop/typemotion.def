@@ -1,0 +1,6 @@
+# The TypeMotion engine for the iPhone (src/ios/typemotion_ios.h), linked
+# into the framework with everything it uses
+headers = typemotion_ios.h
+package = app.typemotion.native
+staticLibraries = libtypemotion_ios_all.a
+linkerOpts = -lc++ -liconv -lz -framework Foundation -framework CoreFoundation -framework CoreText -framework CoreGraphics -framework AudioToolbox -framework AVFoundation -framework CoreVideo -framework CoreMedia -framework VideoToolbox -framework Security
