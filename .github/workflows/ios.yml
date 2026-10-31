@@ -163,12 +163,12 @@ jobs:
       - name: Build the app
         working-directory: ios/app
         run: |
-          set -o pipefail
           xcodebuild -project TypeMotion.xcodeproj -scheme TypeMotion -configuration Release \
             -sdk iphoneos -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee ../../xcode.log | grep -E "error|warning: .*TypeMotion|BUILD" || true
-          test -d build/Build/Products/Release-iphoneos/TypeMotion.app
+            build > ../../xcode.log 2>&1 || status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" ../../xcode.log | head -60 || true
+          exit ${status:-0}
 
       - name: Show the Xcode errors
         if: failure()

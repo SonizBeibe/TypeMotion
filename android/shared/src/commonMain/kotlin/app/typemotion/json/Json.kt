@@ -64,11 +64,6 @@ class JSONObject() {
 
     override fun equals(other: Any?): Boolean = other is JSONObject && other.map == map
     override fun hashCode(): Int = map.hashCode()
-
-    companion object {
-        /** null in JSON */
-        val NULL: Any = JsonNull
-    }
 }
 
 class JSONArray() {
