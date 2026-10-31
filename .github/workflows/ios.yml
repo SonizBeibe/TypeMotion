@@ -68,7 +68,7 @@ jobs:
           -Ddav1d:enable_tools=false -Ddav1d:enable_tests=false -Ddav1d:enable_examples=false -Ddav1d:enable_docs=false
           -Dharfbuzz:tests=disabled -Dharfbuzz:docs=disabled
           -Dfribidi:tests=false -Dfribidi:docs=false
-          -Dfreetype2:png=disabled
+          -Dfreetype2:png=disabled -Dfreetype2:hvf=disabled
           -Dbuild.c_args=-DLUAJIT_DISABLE_JIT
           -Dc_args=-DLUAJIT_DISABLE_JIT
 
