@@ -1,10 +1,14 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package app.typemotion.ios
 
 import androidx.compose.ui.window.ComposeUIViewController
 import app.typemotion.state.AppState
 import app.typemotion.ui.TypeMotionApp
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.AVFAudio.AVAudioSession
 import platform.AVFAudio.AVAudioSessionCategoryPlayback
+import platform.AVFAudio.setActive
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
