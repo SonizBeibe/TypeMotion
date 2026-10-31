@@ -349,6 +349,9 @@ core_src = files(
 if dep_avail.contains('AAudio')
     core_src += files('audio_player_aaudio.cpp')
 endif
+if dep_avail.contains('AudioUnit')
+    core_src += files('audio_player_audiounit.cpp')
+endif
 
 if dep_avail.contains('FFMS2')
     core_src += files('audio_provider_ffmpegsource.cpp',
@@ -362,8 +365,9 @@ headless_src = files(
     'headless/headless_ui.cpp',
 )
 
-# The native library of the Android app
-android_src = files(
+# The engine of the phone apps, which the Android app reaches through JNI
+# and the iPhone app through C functions
+mobile_src = files(
     'android/android_ui.cpp',
     'android/api.cpp',
     'android/bridge.cpp',
@@ -372,8 +376,18 @@ android_src = files(
     'android/dialogs.cpp',
     'android/edit_box.cpp',
     'android/engine.cpp',
-    'android/jni_util.cpp',
     'android/json_io.cpp',
     'android/media.cpp',
     'android/translations.cpp',
+)
+
+# The native library of the Android app
+android_src = mobile_src + files(
+    'android/engine_jni.cpp',
+    'android/jni_util.cpp',
+)
+
+# The engine of the iPhone app (ios/typemotion_ios.h)
+ios_src = mobile_src + files(
+    'ios/capi.cpp',
 )

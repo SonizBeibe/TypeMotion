@@ -13,15 +13,12 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 /// @file bridge.cpp
-/// @brief Messages between the engine and the Android app
+/// @brief Messages between the engine and the app
 /// @ingroup android
 
 #include "bridge.h"
 
-#include "jni_util.h"
 #include "json_io.h"
-
-#include <libaegisub/log.h>
 
 #include <condition_variable>
 #include <map>
@@ -29,9 +26,7 @@
 #include <optional>
 
 namespace {
-	jobject callbacks = nullptr;
-	jmethodID on_event = nullptr;
-	jmethodID on_request = nullptr;
+	bridge::Callbacks callbacks;
 
 	std::mutex requests_mutex;
 	std::condition_variable requests_cv;
@@ -39,40 +34,20 @@ namespace {
 	/// Answers by request id; a request without an answer yet has nothing
 	std::map<int64_t, std::optional<std::string>> requests;
 	bool shutting_down = false;
-
-	/// Report a Java exception thrown by a callback instead of leaving it
-	/// pending, which would make the next JNI call abort
-	void check_exception(JNIEnv *env, const char *callback) {
-		if (!env->ExceptionCheck()) return;
-		env->ExceptionDescribe();
-		env->ExceptionClear();
-		LOG_E("android/bridge") << callback << " threw an exception";
-	}
 }
 
 namespace bridge {
-	void SetCallbacks(JNIEnv *env, jobject new_callbacks) {
-		if (callbacks)
-			env->DeleteGlobalRef(callbacks);
-		callbacks = env->NewGlobalRef(new_callbacks);
-
-		jni::LocalRef<jclass> cls(env, env->GetObjectClass(callbacks));
-		on_event = env->GetMethodID(cls.get(), "onEvent", "(Ljava/lang/String;Ljava/lang/String;)V");
-		on_request = env->GetMethodID(cls.get(), "onRequest", "(JLjava/lang/String;Ljava/lang/String;)V");
-		check_exception(env, "NativeCallbacks");
+	void SetCallbacks(Callbacks new_callbacks) {
+		callbacks = std::move(new_callbacks);
 	}
 
 	void Event(std::string_view kind, json::Object data) {
-		if (!callbacks || !on_event) return;
-		auto env = jni::Env();
-		jni::LocalRef<jstring> jkind(env, jni::ToJava(env, kind));
-		jni::LocalRef<jstring> jdata(env, jni::ToJava(env, json_io::Write(std::move(data))));
-		env->CallVoidMethod(callbacks, on_event, jkind.get(), jdata.get());
-		check_exception(env, "onEvent");
+		if (!callbacks.event) return;
+		callbacks.event(kind, json_io::Write(std::move(data)));
 	}
 
 	json::Object Request(std::string_view kind, json::Object data) {
-		if (!callbacks || !on_request) return {};
+		if (!callbacks.request) return {};
 
 		int64_t id;
 		{
@@ -82,13 +57,7 @@ namespace bridge {
 			requests[id];
 		}
 
-		auto env = jni::Env();
-		{
-			jni::LocalRef<jstring> jkind(env, jni::ToJava(env, kind));
-			jni::LocalRef<jstring> jdata(env, jni::ToJava(env, json_io::Write(std::move(data))));
-			env->CallVoidMethod(callbacks, on_request, static_cast<jlong>(id), jkind.get(), jdata.get());
-			check_exception(env, "onRequest");
-		}
+		callbacks.request(id, kind, json_io::Write(std::move(data)));
 
 		std::unique_lock<std::mutex> lock(requests_mutex);
 		requests_cv.wait(lock, [&] { return shutting_down || requests[id].has_value(); });

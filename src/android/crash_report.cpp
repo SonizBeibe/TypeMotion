@@ -33,7 +33,11 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <signal.h>
+#ifdef __APPLE__
+#include <sys/ucontext.h>
+#else
 #include <ucontext.h>
+#endif
 #include <unistd.h>
 #include <unwind.h>
 
@@ -178,7 +182,11 @@ namespace {
 	uintptr_t fault_pc(void *context) {
 		auto uc = static_cast<ucontext_t *>(context);
 		if (!uc) return 0;
-#if defined(__aarch64__)
+#if defined(__APPLE__) && defined(__aarch64__)
+		return static_cast<uintptr_t>(uc->uc_mcontext->__ss.__pc);
+#elif defined(__APPLE__) && defined(__x86_64__)
+		return static_cast<uintptr_t>(uc->uc_mcontext->__ss.__rip);
+#elif defined(__aarch64__)
 		return static_cast<uintptr_t>(uc->uc_mcontext.pc);
 #elif defined(__x86_64__)
 		return static_cast<uintptr_t>(uc->uc_mcontext.gregs[REG_RIP]);

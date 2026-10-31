@@ -13,11 +13,12 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 /// @file bridge.h
-/// @brief Messages between the engine and the Android app
+/// @brief Messages between the engine and the app
 /// @ingroup android
 ///
-/// The app passes an object implementing app.typemotion.engine.NativeCallbacks
-/// when it starts the engine:
+/// The app gives the engine its callbacks when it starts it: on Android an
+/// object implementing app.typemotion.engine.NativeCallbacks (see
+/// engine_jni.cpp), on iOS C functions (see ios/typemotion_ios.h):
 ///
 ///     interface NativeCallbacks {
 ///         fun onEvent(kind: String, json: String)
@@ -32,16 +33,24 @@
 
 #pragma once
 
-#include <jni.h>
 #include <libaegisub/cajun/elements.h>
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 
 namespace bridge {
-	/// Keep the app's callbacks object
-	void SetCallbacks(JNIEnv *env, jobject callbacks);
+	/// How the engine reaches the app
+	struct Callbacks {
+		/// (kind, json)
+		std::function<void(std::string_view, std::string const&)> event;
+		/// (id, kind, json)
+		std::function<void(int64_t, std::string_view, std::string const&)> request;
+	};
+
+	/// Keep the app's callbacks
+	void SetCallbacks(Callbacks callbacks);
 
 	/// Tell the app something happened
 	void Event(std::string_view kind, json::Object data = {});

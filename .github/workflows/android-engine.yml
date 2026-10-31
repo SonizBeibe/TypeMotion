@@ -1,0 +1,69 @@
+name: Android engine
+
+# Builds libtypemotion.so for Android arm64 with the NDK, as android/README.md
+# does on Windows, to check that changes to the shared engine (src/android,
+# also used by the iPhone app) still build for Android.
+
+on:
+  push:
+    branches: [ 'claude/**', 'ios*' ]
+    paths-ignore: [ 'android/**', 'ios/**' ]
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: Android arm64 engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install meson and ninja
+        run: pip3 install meson ninja
+
+      - name: Download dav1d
+        run: git clone --depth 1 https://github.com/videolan/dav1d.git subprojects/dav1d
+
+      - name: Write the cross file
+        run: |
+          NDK="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "NDK: $NDK"
+          sed -e "s|^ndk = .*|ndk = '$NDK'|" -e "s|windows-x86_64|linux-x86_64|" -e "s|\.exe'|'|g" \
+            android/cross/android-arm64.ini > android-arm64.ini
+          cat android-arm64.ini
+
+      - name: Configure
+        run: >-
+          meson setup build-android
+          --cross-file android-arm64.ini
+          -Dcore_only=true -Dtests=false
+          -Dffms2=enabled --force-fallback-for=ffms2
+          -Dlocal_boost=true -Ddefault_library=static
+          -Dbuildtype=release -Db_pch=false
+          -Dlibass:require-system-font-provider=false
+          -Dlibass:checkasm=disabled -Dlibass:asm=disabled
+          -Dffmpeg:programs=disabled -Dffmpeg:ffmpeg=disabled -Dffmpeg:ffplay=disabled -Dffmpeg:ffprobe=disabled
+          -Dffmpeg:tests=disabled -Dffmpeg:avdevice=disabled -Dffmpeg:avfilter=disabled -Dffmpeg:postproc=disabled
+          -Dffmpeg:encoders=disabled -Dffmpeg:muxers=disabled -Dffmpeg:filters=disabled -Dffmpeg:hwaccels=disabled
+          -Dffmpeg:devices=disabled -Dffmpeg:indevs=disabled -Dffmpeg:outdevs=disabled
+          -Dffmpeg:network=disabled -Dffmpeg:protocols=disabled -Dffmpeg:file_protocol=enabled
+          -Dffmpeg:jni=disabled -Dffmpeg:mediacodec=disabled -Dffmpeg:android=disabled
+          -Dffmpeg:bzlib=disabled -Dffmpeg:lzma=disabled -Dffmpeg:libdav1d=enabled -Dffmpeg:zlib=enabled
+          -Ddav1d:enable_tools=false -Ddav1d:enable_tests=false -Ddav1d:enable_examples=false -Ddav1d:enable_docs=false
+
+      - name: Build
+        run: |
+          set -o pipefail
+          ninja -C build-android -k0 libtypemotion.so 2>&1 | tee build.log
+
+      - name: Show the compile errors
+        if: failure()
+        run: |
+          grep -E "error:|Error |undefined symbol|ld: |ld.lld: " build.log | sort -u | head -80 || true
+
+      - name: Upload the engine
+        uses: actions/upload-artifact@v4
+        with:
+          name: libtypemotion-android-arm64
+          path: build-android/libtypemotion.so

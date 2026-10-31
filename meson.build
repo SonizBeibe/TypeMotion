@@ -328,6 +328,10 @@ if core_only and host_machine.system() == 'darwin'
     # libaegisub/osx uses Foundation (NSBundle, NSProcessInfo) and the fonts
     # are listed with CoreText, which iOS has too
     deps += dependency('appleframeworks', modules: ['Foundation', 'CoreFoundation', 'CoreText'])
+    # Audio output of the iPhone app
+    deps += dependency('appleframeworks', modules: ['AudioToolbox'])
+    conf.set('WITH_AUDIOUNIT', 1)
+    dep_avail += 'AudioUnit'
 endif
 
 if host_machine.system() == 'windows' and cc.has_header('dwrite_3.h')
@@ -526,6 +530,14 @@ if core_only
         endif
         shared_library('typemotion', android_src,
                        dependencies: [typemotion_core_dep] + jni_deps,
+                       install: false)
+    endif
+
+    # The engine of the iPhone app, which the CI workflow merges with the
+    # libraries it uses into one for Xcode (see ios/README.md)
+    if host_machine.system() == 'darwin'
+        static_library('typemotion_ios', ios_src,
+                       dependencies: typemotion_core_dep,
                        install: false)
     endif
 

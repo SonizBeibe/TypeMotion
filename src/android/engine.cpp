@@ -13,13 +13,13 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 /// @file engine.cpp
-/// @brief The native methods of app.typemotion.engine.NativeEngine
+/// @brief Starting, calling and stopping the engine (engine_api.h)
 /// @ingroup android
 
+#include "engine_api.h"
+
 #include "android.h"
-#include "bridge.h"
 #include "crash_report.h"
-#include "jni_util.h"
 #include "json_io.h"
 #include "media.h"
 
@@ -61,15 +61,13 @@ namespace config {
 }
 
 namespace {
-	const char native_engine_class[] = "app/typemotion/engine/NativeEngine";
-
 	std::thread engine_thread;
 	std::atomic<bool> running{false};
 	std::atomic<bool> stopping{false};
 	std::unique_ptr<agi::Context> context;
 	agi::fs::path storage_folder;
 
-	/// Sends the core's log to logcat
+	/// Sends the core's log to logcat, or to stderr elsewhere
 	class LogcatEmitter final : public agi::log::Emitter {
 	public:
 		void log(agi::log::SinkMessage const& sm) override {
@@ -200,11 +198,17 @@ namespace {
 		return json_io::Obj("error", std::move(message));
 	}
 
-	jstring native_init(JNIEnv *env, jclass, jstring jconfig, jobject callbacks) {
-		if (running)
-			return jni::ToJava(env, json_io::Write(error_result("The engine is already running")));
+	std::string error_json(std::string message) {
+		return json_io::Write(error_result(std::move(message)));
+	}
+}
 
-		auto config = json_io::ReadObject(jni::FromJava(env, jconfig));
+namespace engine_api {
+	std::string Init(std::string const& config_json, bridge::Callbacks callbacks) {
+		if (running)
+			return error_json("The engine is already running");
+
+		auto config = json_io::ReadObject(config_json);
 
 		// First of all, so that a crash while starting is written down too
 		auto crash_report = json_io::GetString(config, "crash_report");
@@ -217,7 +221,7 @@ namespace {
 		folders.cache = json_io::GetString(config, "cache_dir");
 		folders.storage = json_io::GetString(config, "storage_dir");
 		if (folders.data.empty() || folders.user.empty() || folders.cache.empty() || folders.storage.empty())
-			return jni::ToJava(env, json_io::Write(error_result("data_dir, user_dir, cache_dir and storage_dir are required")));
+			return error_json("data_dir, user_dir, cache_dir and storage_dir are required");
 
 		// The phone's language, such as es_MX
 		auto locale = json_io::GetString(config, "locale");
@@ -230,7 +234,7 @@ namespace {
 			}
 		}
 
-		bridge::SetCallbacks(env, callbacks);
+		bridge::SetCallbacks(std::move(callbacks));
 
 		std::promise<std::string> started;
 		auto started_future = started.get_future();
@@ -262,17 +266,16 @@ namespace {
 		if (!error.empty()) {
 			engine_thread.join();
 			running = false;
-			return jni::ToJava(env, json_io::Write(error_result(error)));
+			return error_json(error);
 		}
-		return jni::ToJava(env, "{}");
+		return "{}";
 	}
 
-	jstring native_call(JNIEnv *env, jclass, jstring jmethod, jstring jargs) {
+	std::string Call(std::string const& method, std::string const& args_json) {
 		if (!running || stopping)
-			return jni::ToJava(env, json_io::Write(error_result("The engine isn't running")));
+			return error_json("The engine isn't running");
 
-		auto method = jni::FromJava(env, jmethod);
-		auto args = json_io::ReadObject(jni::FromJava(env, jargs));
+		auto args = json_io::ReadObject(args_json);
 		json::Object result;
 		agi::dispatch::Main().Sync([&] {
 			try {
@@ -285,30 +288,28 @@ namespace {
 				result = error_result(e.what());
 			}
 		});
-		return jni::ToJava(env, json_io::Write(std::move(result)));
+		return json_io::Write(std::move(result));
 	}
 
-	void native_respond(JNIEnv *env, jclass, jlong id, jstring answer) {
-		bridge::Respond(id, jni::FromJava(env, answer));
+	void Respond(int64_t id, std::string const& answer) {
+		bridge::Respond(id, answer);
 	}
 
-	jstring native_copy_frame(JNIEnv *env, jclass, jobject buffer, jint max_width, jint max_height) {
-		void *dst = buffer ? env->GetDirectBufferAddress(buffer) : nullptr;
-		jlong capacity = buffer ? env->GetDirectBufferCapacity(buffer) : 0;
-		auto size = android::media::CopyFrame(dst, capacity > 0 ? static_cast<size_t>(capacity) : 0, max_width, max_height);
-		return jni::ToJava(env, json_io::Write(json_io::Obj(
+	std::string CopyFrame(void *dst, size_t capacity, int max_width, int max_height) {
+		auto size = android::media::CopyFrame(dst, capacity, max_width, max_height);
+		return json_io::Write(json_io::Obj(
 			"width", size.width,
 			"height", size.height,
 			"serial", size.serial,
-			"copied", dst && size.width > 0 && static_cast<size_t>(capacity) >= static_cast<size_t>(size.width) * size.height * 4
-		)));
+			"copied", dst && size.width > 0 && capacity >= static_cast<size_t>(size.width) * size.height * 4
+		));
 	}
 
-	void native_cancel(JNIEnv *, jclass) {
+	void Cancel() {
 		android::CancelScript();
 	}
 
-	void native_shutdown(JNIEnv *, jclass) {
+	void Shutdown() {
 		if (!running) return;
 		bridge::Shutdown();
 		android::CancelScript();
@@ -317,33 +318,10 @@ namespace {
 		engine_thread.join();
 		running = false;
 	}
-
-	const JNINativeMethod native_methods[] = {
-		{const_cast<char *>("init"), const_cast<char *>("(Ljava/lang/String;Lapp/typemotion/engine/NativeCallbacks;)Ljava/lang/String;"), reinterpret_cast<void *>(native_init)},
-		{const_cast<char *>("call"), const_cast<char *>("(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"), reinterpret_cast<void *>(native_call)},
-		{const_cast<char *>("respond"), const_cast<char *>("(JLjava/lang/String;)V"), reinterpret_cast<void *>(native_respond)},
-		{const_cast<char *>("copyFrame"), const_cast<char *>("(Ljava/nio/ByteBuffer;II)Ljava/lang/String;"), reinterpret_cast<void *>(native_copy_frame)},
-		{const_cast<char *>("cancel"), const_cast<char *>("()V"), reinterpret_cast<void *>(native_cancel)},
-		{const_cast<char *>("shutdown"), const_cast<char *>("()V"), reinterpret_cast<void *>(native_shutdown)},
-	};
 }
 
 namespace android {
 	agi::fs::path const& StorageFolder() {
 		return storage_folder;
 	}
-}
-
-extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
-	jni::SetVM(vm);
-	JNIEnv *env = nullptr;
-	if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK)
-		return JNI_ERR;
-
-	jclass cls = env->FindClass(native_engine_class);
-	if (!cls) return JNI_ERR;
-	if (env->RegisterNatives(cls, native_methods, sizeof(native_methods) / sizeof(native_methods[0])) != JNI_OK)
-		return JNI_ERR;
-	env->DeleteLocalRef(cls);
-	return JNI_VERSION_1_6;
 }

@@ -50,7 +50,17 @@
 #include <memory>
 #include <mutex>
 
-#ifdef __ANDROID__
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+// The phone apps give libass the fonts which the scripts use from the font
+// folders: Android has no font provider which libass can use, and on the
+// iPhone that is how the fonts in the TypeMotion folder are found
+#if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
+#define TYPEMOTION_MEMORY_FONTS
+#endif
+
+#ifdef TYPEMOTION_MEMORY_FONTS
 #include "font_index.h"
 
 #include <libaegisub/file_mapping.h>
@@ -82,7 +92,7 @@ void msg_callback(int level, const char *fmt, va_list args, void *) {
 		LOG_D("subtitle/provider/libass") << buf;
 }
 
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 // Android has no font provider which libass can use, so the fonts a script
 // asks for are found in the font folders and given to libass as memory fonts
 std::mutex android_fonts_mutex;
@@ -150,7 +160,7 @@ bool android_add_fonts(ASS_Track *track) {
 #endif
 
 void set_fonts(ASS_Renderer *renderer) {
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 	// The default font is used for the fonts which weren't found
 	auto default_font = android_default_font();
 	ass_set_fonts(renderer, default_font.empty() ? nullptr : default_font.c_str(), "Sans", 1, nullptr, true);
@@ -171,7 +181,7 @@ class LibassSubtitlesProvider final : public SubtitlesProvider {
 	agi::BackgroundRunner *br;
 	std::shared_ptr<cache_thread_shared> shared;
 	ASS_Track* ass_track = nullptr;
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 	/// Whether the fonts of the track have been given to libass
 	bool fonts_added = false;
 	/// Whether the renderer has drawn a frame, and so remembers which fonts
@@ -213,7 +223,7 @@ public:
 		if (ass_track) ass_free_track(ass_track);
 		ass_track = ass_read_memory(library, const_cast<char *>(data), len, nullptr);
 		if (!ass_track) throw agi::InternalError("libass failed to load subtitles.");
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 		fonts_added = false;
 #endif
 	}
@@ -229,7 +239,7 @@ public:
 		shared->renderer = ass_renderer_init(library);
 		ass_set_font_scale(shared->renderer, 1.);
 		set_fonts(shared->renderer);
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 		rendered = false;
 #endif
 	}
@@ -261,7 +271,7 @@ LibassSubtitlesProvider::~LibassSubtitlesProvider() {
 #define _a(c) ((c)&0xFF)
 
 void LibassSubtitlesProvider::DrawSubtitles(VideoFrame &frame,double time) {
-#ifdef __ANDROID__
+#ifdef TYPEMOTION_MEMORY_FONTS
 	if (!fonts_added) {
 		// Wait for the renderer before giving libass fonts, then start a
 		// new renderer if this one has already missed some of them

@@ -37,6 +37,7 @@
 #include <libaegisub/string.h>
 
 std::unique_ptr<AudioPlayer> CreateAAudioPlayer(agi::AudioProvider *providers, wxWindow *window);
+std::unique_ptr<AudioPlayer> CreateAudioUnitPlayer(agi::AudioProvider *providers, wxWindow *window);
 std::unique_ptr<AudioPlayer> CreateAlsaPlayer(agi::AudioProvider *providers, wxWindow *window);
 std::unique_ptr<AudioPlayer> CreateDirectSoundPlayer(agi::AudioProvider *providers, wxWindow *window);
 std::unique_ptr<AudioPlayer> CreateDirectSound2Player(agi::AudioProvider *providers, wxWindow *window);
@@ -55,6 +56,9 @@ namespace {
 	const std::initializer_list<factory> factories = {
 #ifdef WITH_AAUDIO
 		{"AAudio", CreateAAudioPlayer, false},
+#endif
+#ifdef WITH_AUDIOUNIT
+		{"AudioUnit", CreateAudioUnitPlayer, false},
 #endif
 #ifdef WITH_ALSA
 		{"ALSA", CreateAlsaPlayer, false},
